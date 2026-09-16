@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Tajo Pages | Comics born in Toledo",
+    "description": "Tajo Pages is a comic book brand born in Toledo. Stories with an edge, told page by page."
+  },
+  "hero": {
+    "title": "Tajo Pages",
+    "slogan": "Comics born in Toledo.\nStories with an edge."
+  },
+  "language": {
+    "label": "Language",
+    "es": "Spanish",
+    "en": "English"
+  },
+  "footer": {
+    "rights": "All rights reserved"
+  },
+  "secciones": {
+    "v0": "Introduction",
+    "v1": "Comics",
+    "v2": "Contact"
+  },
+  "subs": {
+    "volver": "Back",
+    "what-it-is": "What Tajo Pages is",
+    "the-name": "Where the name comes from",
+    "work-with-us": "How to work with us"
+  },
+  "contacto": {
+    "titulo": "Contact",
+    "texto": "One single contact email address for everything: collaboration proposals, press and any question about Tajo Pages. It is answered from there.",
+    "enlace": "Propose a collaboration",
+    "copiar": "Copy contact email",
+    "copiado": "Email copied"
+  },
+  "comics": {
+    "titulo": "No comics published yet",
+    "texto": "This is where Tajo Pages comics will appear, each one with its cover, its synopsis and where to read it. None is published yet: Tajo Pages has only just started.",
+    "enlace": "Propose a collaboration"
+  },
+  "paneles": {
+    "anterior": "Previous",
+    "siguiente": "Next",
+    "what-it-is": {
+      "p1": {
+        "titulo": "What Tajo Pages is",
+        "texto": "Tajo Pages is a comic book brand born in Toledo, with stories made to be read page by page."
+      },
+      "p2": {
+        "titulo": "Where it is published",
+        "texto": "Right here, at tajo.page. This website is the home of the brand and the place where its stories will be published."
+      },
+      "p3": {
+        "titulo": "Where it stands",
+        "texto": "Tajo Pages has only just started. The first comics will appear in the Comics section as soon as they are ready."
+      }
+    },
+    "the-name": {
+      "p1": {
+        "titulo": "The river",
+        "texto": "The Tajo, known in English as the Tagus, surrounds Toledo on three sides and has been part of the city's image for centuries."
+      },
+      "p2": {
+        "titulo": "The cut",
+        "texto": "In Spanish, a tajo is also a sword cut. And Toledo has been famous for its swords for centuries."
+      },
+      "p3": {
+        "titulo": "The pages",
+        "texto": "Pages, because every story is told page by page. And because its home on the internet is tajo.page."
+      }
+    },
+    "work-with-us": {
+      "p1": {
+        "titulo": "Who it is for",
+        "texto": "Anyone who draws, writes, colours or letters comics and wants to tell stories with Tajo Pages."
+      },
+      "p2": {
+        "titulo": "What to send",
+        "texto": "Who you are, what you do and links to work you have already published. That is enough to start talking."
+      },
+      "p3": {
+        "titulo": "Where to send it",
+        "texto": "Send an email to the address shown below, with the subject “Tajo Pages collaboration”. No forms and no middlemen."
+      }
+    }
+  }
+}

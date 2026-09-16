@@ -1,0 +1,12 @@
+{
+  "principal": {
+    "en": ["introduction", "comics", "contact"],
+    "es": ["introduccion", "comics", "contacto"]
+  },
+  "subs": {
+    "introduction": {
+      "en": ["what-it-is", "the-name", "work-with-us"],
+      "es": ["que-es", "nombre", "colaborar"]
+    }
+  }
+}

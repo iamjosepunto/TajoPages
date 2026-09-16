@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Tajo Pages | Cómics nacidos en Toledo",
+    "description": "Tajo Pages es una marca de cómics nacida en Toledo. Historias con filo, contadas página a página."
+  },
+  "hero": {
+    "title": "Tajo Pages",
+    "slogan": "Cómics nacidos en Toledo.\nHistorias con filo."
+  },
+  "language": {
+    "label": "Idioma",
+    "es": "Español",
+    "en": "Inglés"
+  },
+  "footer": {
+    "rights": "Todos los derechos reservados"
+  },
+  "secciones": {
+    "v0": "Introducción",
+    "v1": "Cómics",
+    "v2": "Contacto"
+  },
+  "subs": {
+    "volver": "Volver",
+    "what-it-is": "Qué es Tajo Pages",
+    "the-name": "De dónde viene el nombre",
+    "work-with-us": "Cómo colaborar"
+  },
+  "contacto": {
+    "titulo": "Contacto",
+    "texto": "Una sola dirección de email de contacto para todo: propuestas de colaboración, prensa y cualquier duda sobre Tajo Pages. Se contesta desde ahí mismo.",
+    "enlace": "Propón una colaboración",
+    "copiar": "Copiar email de contacto",
+    "copiado": "Email copiado"
+  },
+  "comics": {
+    "titulo": "Todavía no hay cómics publicados",
+    "texto": "Aquí aparecerán los cómics de Tajo Pages, cada uno con su portada, su sinopsis y dónde leerlo. Ninguno está publicado todavía: Tajo Pages acaba de empezar.",
+    "enlace": "Propón una colaboración"
+  },
+  "paneles": {
+    "anterior": "Anterior",
+    "siguiente": "Siguiente",
+    "what-it-is": {
+      "p1": {
+        "titulo": "Qué es Tajo Pages",
+        "texto": "Tajo Pages es una marca de cómics nacida en Toledo, con historias pensadas para leerse página a página."
+      },
+      "p2": {
+        "titulo": "Dónde se publica",
+        "texto": "Aquí, en tajo.page. Esta web es la casa de la marca y el lugar donde se irán publicando sus historias."
+      },
+      "p3": {
+        "titulo": "En qué punto está",
+        "texto": "Tajo Pages acaba de empezar. Los primeros cómics aparecerán en la sección Cómics en cuanto estén listos."
+      }
+    },
+    "the-name": {
+      "p1": {
+        "titulo": "El río",
+        "texto": "El Tajo rodea Toledo por tres de sus lados y forma parte de la imagen de la ciudad desde hace siglos."
+      },
+      "p2": {
+        "titulo": "El corte",
+        "texto": "Un tajo es también un corte de espada. Y Toledo es famosa por sus espadas desde hace siglos."
+      },
+      "p3": {
+        "titulo": "Las páginas",
+        "texto": "Pages, porque cada historia se cuenta página a página. Y porque su casa en internet es tajo.page."
+      }
+    },
+    "work-with-us": {
+      "p1": {
+        "titulo": "A quién va dirigido",
+        "texto": "A quien dibuja, escribe, colorea o rotula cómic y quiere contar historias con Tajo Pages."
+      },
+      "p2": {
+        "titulo": "Qué hay que enviar",
+        "texto": "Quién eres, qué haces y enlaces a trabajos que ya hayas publicado. Con eso basta para empezar a hablar."
+      },
+      "p3": {
+        "titulo": "Dónde se envía",
+        "texto": "Envía un correo electrónico a la dirección que aparece más adelante, con el asunto «Colaboración Tajo Pages». Sin formularios ni intermediarios."
+      }
+    }
+  }
+}

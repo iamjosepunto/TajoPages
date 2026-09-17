@@ -39,6 +39,12 @@ const PANELES: Record<string, Panel[]> = {
   ]
 }
 
+// Comics publicados, indexados por el slug ingles de su subruta. vinetas es el
+// numero de vinetas ya publicadas: el lector no pide imagenes que aun no existen
+const COMICS: Record<string, { carpeta: string; vinetas: number }> = {
+  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 26 }
+}
+
 // Secciones cuyas subrutas se listan en la columna izquierda. Las demas llegan
 // a las suyas desde las zonas clicables de su escena
 const CON_SUBMENU = ['comics']
@@ -182,6 +188,113 @@ function EscenaIntroduccion({
         </g>
       ))}
     </svg>
+  )
+}
+
+// Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
+// leer, y cada vineta va de borde a borde sobre su texto. No es ciclico: desde la
+// primera vineta se vuelve a la portada y la ultima no avanza mas
+function LectorComic({ comic }: { comic: string }) {
+  const { t, i18n } = useTranslation()
+  const datos = COMICS[comic]
+  const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
+  const [pagina, setPagina] = useState(0)
+  const ultima = datos.vinetas
+  const ir = (paso: number) => setPagina((n) => Math.min(Math.max(n + paso, 0), ultima))
+  const codigo = String(pagina).padStart(3, '0')
+  const texto = t(`vinetas.${comic}.${codigo}`)
+
+  return (
+    <div
+      className="relative flex h-full w-full flex-col border border-crema bg-fondo"
+      style={{ containerType: 'size' }}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowLeft') ir(-1)
+        if (e.key === 'ArrowRight') ir(1)
+      }}
+      tabIndex={0}
+    >
+      {pagina === 0 ? (
+        <>
+          <img
+            src={`${datos.carpeta}/portada-${idioma}.webp`}
+            alt={t('comics.portada')}
+            width={576}
+            height={1280}
+            className="h-full w-full object-cover"
+          />
+          {/* Centrado en la franja inferior de la portada, entre el numero y el sello */}
+          <button
+            type="button"
+            onClick={() => ir(1)}
+            className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors hover:bg-crema"
+            style={{ bottom: '3.5cqw', padding: '3cqw 4.5cqw', fontSize: '5.5cqw', letterSpacing: '0.12em', lineHeight: 1, borderRadius: '1cqw' }}
+          >
+            {t('lector.leer')}
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Las vinetas se dibujan a 576x976: ocupan todo el ancho, tocando los
+              bordes, y dejan debajo sitio para textos de hasta tres lineas */}
+          <img
+            src={`${datos.carpeta}/vinetas/vineta-${codigo}.webp`}
+            alt={texto}
+            width={576}
+            height={976}
+            className="aspect-[576/976] w-full shrink-0 object-cover"
+          />
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '4cqw 5cqw' }}>
+            <p className="text-ink/80" style={{ fontSize: '6cqw', lineHeight: 1.65 }}>
+              {texto}
+            </p>
+          </div>
+
+          <div
+            className="flex items-center justify-between border-t border-line/60"
+            style={{ padding: '3cqw 5cqw' }}
+          >
+            <button
+              type="button"
+              onClick={() => setPagina(0)}
+              className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
+              style={{ fontSize: '5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+            >
+              {`<< ${t('subs.volver')}`}
+            </button>
+
+            <div className="flex items-center" style={{ gap: '4cqw' }}>
+              {/* Cabe hasta 120 / 120 junto a VOLVER y las flechas */}
+              <span
+                className="whitespace-nowrap font-mono text-muted"
+                style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+              >
+                {`${pagina} / ${ultima}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => ir(-1)}
+                aria-label={t('paneles.anterior')}
+                className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent"
+                style={{ fontSize: '9cqw', lineHeight: 1 }}
+              >
+                &lt;
+              </button>
+              <button
+                type="button"
+                onClick={() => ir(1)}
+                disabled={pagina === ultima}
+                aria-label={t('paneles.siguiente')}
+                className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-enlace"
+                style={{ fontSize: '9cqw', lineHeight: 1 }}
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -381,48 +494,6 @@ function PantallaContacto({ alParticipar }: { alParticipar: (() => void) | null 
   )
 }
 
-// Pantalla de la seccion de comics mientras no haya ninguno publicado
-function PantallaComics({ alParticipar }: { alParticipar: (() => void) | null }) {
-  const { t } = useTranslation()
-
-  return (
-    <div
-      className="flex h-full w-full flex-col overflow-y-auto border border-crema bg-fondo"
-      style={{ containerType: 'size' }}
-    >
-      <img
-        src="/sin-comics.webp"
-        alt={t('comics.titulo')}
-        width={900}
-        height={900}
-        className="w-full object-cover"
-        style={{ height: '31cqh', marginTop: '5cqw' }}
-      />
-      <div style={{ padding: '6cqw' }}>
-        <h2
-          className="font-mono uppercase text-accent"
-          style={{ fontSize: '7cqw', letterSpacing: '0.08em', marginBottom: '4cqw' }}
-        >
-          {t('comics.titulo')}
-        </h2>
-        <p className="text-ink/80" style={{ fontSize: '6cqw', lineHeight: 1.65 }}>
-          {t('comics.texto')}
-        </p>
-        {alParticipar && (
-          <button
-            type="button"
-            onClick={alParticipar}
-            className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
-            style={{ fontSize: '4.2cqw', letterSpacing: '0.1em', marginTop: '6cqw' }}
-          >
-            {`${t('comics.enlace')} >>`}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const { t, i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? 'en'
@@ -606,8 +677,6 @@ export default function App() {
   const sinMedia = subActiva === null && tabla !== null && abreSubmenu(seccion)
 
   const rutaSub = subActiva !== null && tabla ? tabla.en[subActiva] : null
-  // Comics no tiene subrutas mientras no haya ningun comic publicado
-  const enComics = SLUGS.en[seccion] === 'comics' && subActiva === null
   // Contacto tampoco tiene subrutas: es una sola pantalla
   const enContacto = SLUGS.en[seccion] === 'contact' && subActiva === null
 
@@ -712,12 +781,12 @@ export default function App() {
           />
         )}
 
-        {!conEscena && !sinMedia && enComics && (
-          <PantallaComics alParticipar={PARTICIPAR ? irAParticipar : null} />
-        )}
-
         {!conEscena && !sinMedia && enContacto && (
           <PantallaContacto alParticipar={PARTICIPAR ? irAParticipar : null} />
+        )}
+
+        {!conEscena && !sinMedia && rutaSub && COMICS[rutaSub] && (
+          <LectorComic key={rutaSub} comic={rutaSub} />
         )}
 
         {!conEscena && !sinMedia && rutaSub && PANELES[rutaSub] && (
@@ -729,7 +798,7 @@ export default function App() {
           />
         )}
 
-        {!conEscena && !sinMedia && !enComics && !enContacto && !(rutaSub && PANELES[rutaSub]) && (
+        {!conEscena && !sinMedia && !enContacto && !(rutaSub && (PANELES[rutaSub] || COMICS[rutaSub])) && (
           <img
             src={portadaDe(lang)}
             alt={nombreActual}

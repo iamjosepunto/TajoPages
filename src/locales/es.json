@@ -24,7 +24,8 @@
     "volver": "Volver",
     "what-it-is": "Qué es Tajo Pages",
     "the-name": "De dónde viene el nombre",
-    "work-with-us": "Cómo colaborar"
+    "work-with-us": "Cómo colaborar",
+    "celestial-invader": "Invasor celeste"
   },
   "contacto": {
     "titulo": "Contacto",
@@ -36,7 +37,8 @@
   "comics": {
     "titulo": "Todavía no hay cómics publicados",
     "texto": "Aquí aparecerán los cómics de Tajo Pages, cada uno con su portada, su sinopsis y dónde leerlo. Ninguno está publicado todavía: Tajo Pages acaba de empezar.",
-    "enlace": "Propón una colaboración"
+    "enlace": "Propón una colaboración",
+    "portada": "Portada de TOLETUM nº 1: Invasor celeste"
   },
   "paneles": {
     "anterior": "Anterior",
@@ -82,6 +84,39 @@
         "titulo": "Dónde se envía",
         "texto": "Envía un correo electrónico a la dirección que aparece más adelante, con el asunto «Colaboración Tajo Pages». Sin formularios ni intermediarios."
       }
+    }
+  },
+  "lector": {
+    "leer": "Leer cómic"
+  },
+  "vinetas": {
+    "celestial-invader": {
+      "001": "Toletum, siglo XIII. La ciudad duerme tras sus murallas.",
+      "002": "En la muralla, el viejo vigía Mateo cumple su guardia.",
+      "003": "«¿Qué es esa estrella que corre?»",
+      "004": "No era una estrella. Era fuego que caía del cielo.",
+      "005": "Un zumbido hace temblar los postigos de media ciudad.",
+      "006": "En la posada del Tajo, Hernán de Castilla despierta de golpe.",
+      "007": "¡Va directo al corazón de la ciudad!",
+      "008": "¡BOOOOM!",
+      "009": "La onda derriba puestos, carros y chimeneas.",
+      "010": "Donde estaba el mercado ahora hay un cráter.",
+      "011": "Mientras todos huyen, un hombre camina hacia el peligro.",
+      "012": "El capitán Rodrigo y su guardia rodean el cráter.",
+      "013": "«¿Qué ha caído aquí, Rodrigo?» «Nada bueno, Hernán.»",
+      "014": "La piedra del cielo sigue ardiendo por dentro.",
+      "015": "¡CRAAAC!",
+      "016": "Dentro de la piedra hay un huevo. Un huevo enorme.",
+      "017": "«¡Un huevo de gigante!» «¡Es una maldición!»",
+      "018": "Fray Anselmo pide calma; otros quieren romperlo a hachazos.",
+      "019": "«¡Que nadie se acerque hasta el amanecer!»",
+      "020": "La cáscara quema como una piedra al sol.",
+      "021": "Pum... pum... pum... Algo late dentro.",
+      "022": "Pasa la noche. Nadie vigila lo que debería.",
+      "023": "Al alba, la primera grieta.",
+      "024": "¡SSSSS! El hierro se deshace como cera.",
+      "025": "«¡Atrás! ¡Atrás todos!»",
+      "026": "¡KRAAASH!"
     }
   }
 }

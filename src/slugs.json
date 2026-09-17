@@ -7,6 +7,10 @@
     "introduction": {
       "en": ["what-it-is", "the-name", "work-with-us"],
       "es": ["que-es", "nombre", "colaborar"]
+    },
+    "comics": {
+      "en": ["celestial-invader"],
+      "es": ["invasor-celeste"]
     }
   }
 }

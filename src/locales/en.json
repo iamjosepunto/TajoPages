@@ -24,7 +24,8 @@
     "volver": "Back",
     "what-it-is": "What Tajo Pages is",
     "the-name": "Where the name comes from",
-    "work-with-us": "How to work with us"
+    "work-with-us": "How to work with us",
+    "celestial-invader": "Celestial Invader"
   },
   "contacto": {
     "titulo": "Contact",
@@ -36,7 +37,8 @@
   "comics": {
     "titulo": "No comics published yet",
     "texto": "This is where Tajo Pages comics will appear, each one with its cover, its synopsis and where to read it. None is published yet: Tajo Pages has only just started.",
-    "enlace": "Propose a collaboration"
+    "enlace": "Propose a collaboration",
+    "portada": "Cover of TOLETUM No. 1: Celestial Invader"
   },
   "paneles": {
     "anterior": "Previous",
@@ -82,6 +84,39 @@
         "titulo": "Where to send it",
         "texto": "Send an email to the address shown below, with the subject “Tajo Pages collaboration”. No forms and no middlemen."
       }
+    }
+  },
+  "lector": {
+    "leer": "Read comic"
+  },
+  "vinetas": {
+    "celestial-invader": {
+      "001": "Toletum, 13th century. The city sleeps behind its walls.",
+      "002": "On the wall, old Mateo the watchman keeps his watch.",
+      "003": "“What is that running star?”",
+      "004": "It was no star. It was fire falling from the sky.",
+      "005": "A deep rumble rattles the shutters across half the city.",
+      "006": "At the Tajo inn, Hernán de Castilla wakes with a start.",
+      "007": "It is heading straight for the heart of the city!",
+      "008": "BOOOOM!",
+      "009": "The blast knocks down stalls, carts and chimneys.",
+      "010": "Where the market stood, there is now a crater.",
+      "011": "While everyone flees, one man walks toward the danger.",
+      "012": "Captain Rodrigo and his guard surround the crater.",
+      "013": "“What has fallen here, Rodrigo?” “Nothing good, Hernán.”",
+      "014": "The stone from the sky is still burning inside.",
+      "015": "CRAAACK!",
+      "016": "Inside the stone there is an egg. A huge egg.",
+      "017": "“A giant's egg!” “It is a curse!”",
+      "018": "Friar Anselmo calls for calm; others want to smash it with their axes.",
+      "019": "“Let no one come near until dawn!”",
+      "020": "The shell is as hot as a stone baking in the sun.",
+      "021": "Thump... thump... thump... Something is beating inside.",
+      "022": "The night passes. No one watches what they should.",
+      "023": "At dawn, the first crack.",
+      "024": "SSSSS! The iron melts like wax.",
+      "025": "“Back! Everyone back!”",
+      "026": "KRAAASH!"
     }
   }
 }

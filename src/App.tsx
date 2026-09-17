@@ -42,7 +42,7 @@ const PANELES: Record<string, Panel[]> = {
 // Comics publicados, indexados por el slug ingles de su subruta. vinetas es el
 // numero de vinetas ya publicadas: el lector no pide imagenes que aun no existen
 const COMICS: Record<string, { carpeta: string; vinetas: number }> = {
-  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 64 }
+  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 84 }
 }
 
 // Secciones cuyas subrutas se listan en la columna izquierda. Las demas llegan

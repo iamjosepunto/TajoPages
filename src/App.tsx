@@ -226,6 +226,49 @@ function LectorComic({ comic }: { comic: string }) {
         ? t('lector.indice')
         : romano
 
+  // Flechas superpuestas en los laterales de la imagen, en caratulas y vinetas.
+  // Cada una va en un circulo crema opaco para que se lea sobre cualquier fondo,
+  // y se desvanece cuando no hay pagina a la que ir
+  const ladoFlecha =
+    'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-center disabled:cursor-default disabled:opacity-0'
+  const circuloFlecha =
+    'flex items-center justify-center rounded-full bg-crema font-mono text-deep shadow-lg transition-colors group-hover:bg-accent'
+  const medidaCirculo = { width: '11cqw', height: '11cqw', fontSize: '6.5cqw', lineHeight: 1 }
+  // Van ancladas arriba y con el alto exacto de una vineta, 976/576 del ancho,
+  // para quedar a la misma altura en las vinetas y en las caratulas, que se
+  // centran en su hueco
+  const flechasLaterales = (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 z-10"
+      style={{ height: '169.44cqw' }}
+    >
+      <button
+        type="button"
+        onClick={() => ir(-1)}
+        disabled={pagina === 0}
+        aria-label={t('paneles.anterior')}
+        className={`${ladoFlecha} left-0 justify-start`}
+        style={{ width: '17%', paddingLeft: '2.5cqw' }}
+      >
+        <span className={circuloFlecha} style={medidaCirculo}>
+          &lt;
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => ir(1)}
+        disabled={pagina === ultima}
+        aria-label={t('paneles.siguiente')}
+        className={`${ladoFlecha} right-0 justify-end`}
+        style={{ width: '17%', paddingRight: '2.5cqw' }}
+      >
+        <span className={circuloFlecha} style={medidaCirculo}>
+          &gt;
+        </span>
+      </button>
+    </div>
+  )
+
   // La barra inferior es la misma en las caratulas y en las vinetas
   const barra = (
     <div
@@ -241,34 +284,13 @@ function LectorComic({ comic }: { comic: string }) {
         {`<< ${t('subs.volver')}`}
       </button>
 
-      <div className="flex items-center" style={{ gap: '4cqw' }}>
-        {/* Cabe hasta 120 / 120 junto a VOLVER y las flechas */}
-        <span
-          className="whitespace-nowrap font-mono text-muted"
-          style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
-        >
-          {contador}
-        </span>
-        <button
-          type="button"
-          onClick={() => ir(-1)}
-          aria-label={t('paneles.anterior')}
-          className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent"
-          style={{ fontSize: '9cqw', lineHeight: 1 }}
-        >
-          &lt;
-        </button>
-        <button
-          type="button"
-          onClick={() => ir(1)}
-          disabled={pagina === ultima}
-          aria-label={t('paneles.siguiente')}
-          className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-enlace"
-          style={{ fontSize: '9cqw', lineHeight: 1 }}
-        >
-          &gt;
-        </button>
-      </div>
+      {/* Ya sin flechas: la navegacion va en los laterales de la imagen */}
+      <span
+        className="whitespace-nowrap font-mono text-muted"
+        style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+      >
+        {contador}
+      </span>
     </div>
   )
 
@@ -359,7 +381,7 @@ function LectorComic({ comic }: { comic: string }) {
                 style={{ height: '33%', padding: '0 9cqw' }}
               >
                 <span
-                  className="font-mono uppercase text-muted"
+                  className="font-mono uppercase text-deep/70"
                   style={{ fontSize: '4cqw', letterSpacing: '0.3em', lineHeight: 1 }}
                 >
                   {`${t('lector.capitulo')} ${romano}`}
@@ -395,6 +417,8 @@ function LectorComic({ comic }: { comic: string }) {
           {barra}
         </>
       )}
+
+      {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
     </div>
   )
 }

@@ -40,9 +40,11 @@ const PANELES: Record<string, Panel[]> = {
 }
 
 // Comics publicados, indexados por el slug ingles de su subruta. vinetas es el
-// numero de vinetas ya publicadas: el lector no pide imagenes que aun no existen
-const COMICS: Record<string, { carpeta: string; vinetas: number }> = {
-  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 120 }
+// numero de vinetas ya publicadas: el lector no pide imagenes que aun no existen.
+// capitulos es la ultima vineta de cada capitulo: con ella se sabe en que carpeta
+// esta guardada cada imagen, capitulo-01, capitulo-02, y asi hasta capitulo-08
+const COMICS: Record<string, { carpeta: string; vinetas: number; capitulos: number[] }> = {
+  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 120, capitulos: [12, 26, 44, 64, 84, 96, 108, 120] }
 }
 
 // Secciones cuyas subrutas se listan en la columna izquierda. Las demas llegan
@@ -191,18 +193,101 @@ function EscenaIntroduccion({
   )
 }
 
+const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
+
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
-// leer, y cada vineta va de borde a borde sobre su texto. No es ciclico: desde la
-// primera vineta se vuelve a la portada y la ultima no avanza mas
+// leer, cada capitulo se abre con su caratula y cada vineta va de borde a borde
+// sobre su texto. No es ciclico: desde la caratula del primer capitulo se vuelve
+// a la portada y la ultima vineta no avanza mas
 function LectorComic({ comic }: { comic: string }) {
   const { t, i18n } = useTranslation()
   const datos = COMICS[comic]
   const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
   const [pagina, setPagina] = useState(0)
-  const ultima = datos.vinetas
+  // La secuencia del lector: la portada, y luego cada capitulo con su caratula
+  // por delante de sus vinetas. Todo lo demas se deduce de aqui
+  const paginas: {
+    tipo: 'portada' | 'caratula' | 'vineta'
+    capitulo: number
+    vineta: number
+    enCapitulo: number
+    delCapitulo: number
+  }[] = [{ tipo: 'portada', capitulo: 0, vineta: 0, enCapitulo: 0, delCapitulo: 0 }]
+  let primera = 1
+  datos.capitulos.forEach((fin, i) => {
+    const ultimaDelCapitulo = Math.min(fin, datos.vinetas)
+    const cuantas = ultimaDelCapitulo - primera + 1
+    paginas.push({ tipo: 'caratula', capitulo: i + 1, vineta: 0, enCapitulo: 0, delCapitulo: cuantas })
+    for (let v = primera; v <= ultimaDelCapitulo; v++) {
+      paginas.push({
+        tipo: 'vineta',
+        capitulo: i + 1,
+        vineta: v,
+        enCapitulo: v - primera + 1,
+        delCapitulo: cuantas
+      })
+    }
+    primera = fin + 1
+  })
+  const ultima = paginas.length - 1
   const ir = (paso: number) => setPagina((n) => Math.min(Math.max(n + paso, 0), ultima))
-  const codigo = String(pagina).padStart(3, '0')
-  const texto = t(`vinetas.${comic}.${codigo}`)
+  const actual = paginas[pagina]
+  const codigo = String(actual.vineta).padStart(3, '0')
+  const texto = actual.tipo === 'vineta' ? t(`vinetas.${comic}.${codigo}`) : ''
+  // Cada capitulo guarda su caratula y sus vinetas en su propia carpeta
+  const capituloCod = String(actual.capitulo).padStart(2, '0')
+  const carpetaCapitulo = `${datos.carpeta}/capitulo-${capituloCod}`
+  const tituloCapitulo = t(`capitulos.${comic}.${actual.capitulo}`)
+  // El contador lleva delante el capitulo, y cuenta dentro de el
+  const romano = ROMANOS[actual.capitulo - 1]
+  const contador =
+    actual.tipo === 'vineta' ? `${romano} · ${actual.enCapitulo} / ${actual.delCapitulo}` : romano
+
+  // La barra inferior es la misma en las caratulas y en las vinetas
+  const barra = (
+    <div
+      className="flex items-center justify-between border-t border-line/60"
+      style={{ padding: '3cqw 5cqw' }}
+    >
+      <button
+        type="button"
+        onClick={() => setPagina(0)}
+        className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
+        style={{ fontSize: '5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+      >
+        {`<< ${t('subs.volver')}`}
+      </button>
+
+      <div className="flex items-center" style={{ gap: '4cqw' }}>
+        {/* Cabe hasta 120 / 120 junto a VOLVER y las flechas */}
+        <span
+          className="whitespace-nowrap font-mono text-muted"
+          style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+        >
+          {contador}
+        </span>
+        <button
+          type="button"
+          onClick={() => ir(-1)}
+          aria-label={t('paneles.anterior')}
+          className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent"
+          style={{ fontSize: '9cqw', lineHeight: 1 }}
+        >
+          &lt;
+        </button>
+        <button
+          type="button"
+          onClick={() => ir(1)}
+          disabled={pagina === ultima}
+          aria-label={t('paneles.siguiente')}
+          className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-enlace"
+          style={{ fontSize: '9cqw', lineHeight: 1 }}
+        >
+          &gt;
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div
@@ -233,12 +318,47 @@ function LectorComic({ comic }: { comic: string }) {
             {t('lector.leer')}
           </button>
         </>
+      ) : actual.tipo === 'caratula' ? (
+        <>
+          {/* La caratula es un pergamino de 576x976 con el tercio de arriba
+              limpio: ahi es donde cae el rotulo del capitulo */}
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            <div className="relative w-full">
+              <img
+                src={`${carpetaCapitulo}/caratula-${capituloCod}.webp`}
+                alt={tituloCapitulo}
+                width={576}
+                height={976}
+                className="aspect-[576/976] w-full object-cover"
+              />
+              <div
+                className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center"
+                style={{ height: '33%', padding: '0 9cqw' }}
+              >
+                <span
+                  className="font-mono uppercase text-muted"
+                  style={{ fontSize: '4cqw', letterSpacing: '0.3em', lineHeight: 1 }}
+                >
+                  {`${t('lector.capitulo')} ${romano}`}
+                </span>
+                <span
+                  className="uppercase text-deep"
+                  style={{ fontSize: '9cqw', letterSpacing: '0.05em', lineHeight: 1.15, marginTop: '4cqw' }}
+                >
+                  {tituloCapitulo}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {barra}
+        </>
       ) : (
         <>
           {/* Las vinetas se dibujan a 576x976: ocupan todo el ancho, tocando los
               bordes, y dejan debajo sitio para textos de hasta tres lineas */}
           <img
-            src={`${datos.carpeta}/vinetas/vineta-${codigo}.webp`}
+            src={`${carpetaCapitulo}/vineta-${capituloCod}-${codigo}.webp`}
             alt={texto}
             width={576}
             height={976}
@@ -249,49 +369,7 @@ function LectorComic({ comic }: { comic: string }) {
               {texto}
             </p>
           </div>
-
-          <div
-            className="flex items-center justify-between border-t border-line/60"
-            style={{ padding: '3cqw 5cqw' }}
-          >
-            <button
-              type="button"
-              onClick={() => setPagina(0)}
-              className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
-              style={{ fontSize: '5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
-            >
-              {`<< ${t('subs.volver')}`}
-            </button>
-
-            <div className="flex items-center" style={{ gap: '4cqw' }}>
-              {/* Cabe hasta 120 / 120 junto a VOLVER y las flechas */}
-              <span
-                className="whitespace-nowrap font-mono text-muted"
-                style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
-              >
-                {`${pagina} / ${ultima}`}
-              </span>
-              <button
-                type="button"
-                onClick={() => ir(-1)}
-                aria-label={t('paneles.anterior')}
-                className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent"
-                style={{ fontSize: '9cqw', lineHeight: 1 }}
-              >
-                &lt;
-              </button>
-              <button
-                type="button"
-                onClick={() => ir(1)}
-                disabled={pagina === ultima}
-                aria-label={t('paneles.siguiente')}
-                className="cursor-pointer font-mono text-enlace transition-colors hover:text-accent disabled:cursor-default disabled:opacity-30 disabled:hover:text-enlace"
-                style={{ fontSize: '9cqw', lineHeight: 1 }}
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
+          {barra}
         </>
       )}
     </div>

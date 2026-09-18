@@ -74,17 +74,6 @@ function abreSubmenu(indice: number) {
   return CON_SUBMENU.includes(SLUGS.en[indice]) && subsDe(indice) !== null
 }
 
-// La subruta de participar se localiza por su slug ingles, no por su posicion:
-// asi el enlace de la pantalla de comics sigue valiendo si cambia el orden
-function destinoParticipar() {
-  const indice = SLUGS.en.indexOf('introduction')
-  const tabla = indice === -1 ? null : subsDe(indice)
-  const sub = tabla ? tabla.en.indexOf('work-with-us') : -1
-  return indice === -1 || sub === -1 ? null : { indice, sub }
-}
-
-const PARTICIPAR = destinoParticipar()
-
 const INTRO_VISTA = 'intro-vista'
 
 // La presentacion solo tiene sentido al entrar por la puerta principal: si la
@@ -306,7 +295,7 @@ function LectorComic({ comic }: { comic: string }) {
           <button
             type="button"
             onClick={() => ir(1)}
-            className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors hover:bg-crema"
+            className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-crema"
             style={{ bottom: '3.5cqw', padding: '3cqw 4.5cqw', fontSize: '5.5cqw', letterSpacing: '0.12em', lineHeight: 1, borderRadius: '1cqw' }}
           >
             {t('lector.leer')}
@@ -564,7 +553,7 @@ function BloqueCorreo() {
 }
 
 // Pantalla de la seccion de contacto: texto y la direccion como enlace
-function PantallaContacto({ alParticipar }: { alParticipar: (() => void) | null }) {
+function PantallaContacto() {
   const { t } = useTranslation()
 
   return (
@@ -591,16 +580,6 @@ function PantallaContacto({ alParticipar }: { alParticipar: (() => void) | null 
           {t('contacto.texto')}
         </p>
         <BloqueCorreo />
-        {alParticipar && (
-          <button
-            type="button"
-            onClick={alParticipar}
-            className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
-            style={{ fontSize: '4.2cqw', letterSpacing: '0.1em', marginTop: '6cqw' }}
-          >
-            {`${t('contacto.enlace')} >>`}
-          </button>
-        )}
       </div>
     </div>
   )
@@ -620,7 +599,7 @@ export default function App() {
   )
   const [pantallaCompleta, setPantallaCompleta] = useState(false)
   const menu = useRef<HTMLElement>(null)
-  const [borde, setBorde] = useState({ izq: 0, der: 0, ancho: 0 })
+  const [borde, setBorde] = useState({ izq: 0, der: 0, ancho: 0, arriba: 0 })
   const [esEscritorio, setEsEscritorio] = useState(false)
   const zonaImagen = useRef<HTMLDivElement>(null)
   const pie = useRef<HTMLElement>(null)
@@ -706,7 +685,9 @@ export default function App() {
       setBorde({
         izq: Math.round(r.left - n.offsetWidth),
         der: Math.round(r.right),
-        ancho: n.offsetWidth
+        ancho: n.offsetWidth,
+        // El alto libre que queda por encima de la caja: en movil es lo que ocupa el logo
+        arriba: Math.round(r.top)
       })
     }
     const observador = new ResizeObserver(medir)
@@ -750,14 +731,6 @@ export default function App() {
   const volverAEscena = () => {
     mostrar(seccion, null)
     window.history.pushState(null, '', rutaDe(language, seccion, null))
-  }
-
-  // Salto desde la pantalla de comics a la subruta de colaborar
-  const irAParticipar = () => {
-    if (!PARTICIPAR) return
-    setEnSubmenu(false)
-    mostrar(PARTICIPAR.indice, PARTICIPAR.sub)
-    window.history.pushState(null, '', rutaDe(language, PARTICIPAR.indice, PARTICIPAR.sub))
   }
 
   // VOLVER cierra el submenu y baja al primer punto de la lista: la seccion con
@@ -839,7 +812,14 @@ export default function App() {
       <nav
         ref={menu}
         aria-label="Secciones"
-        style={esEscritorio && !pantallaCompleta ? { left: borde.izq } : undefined}
+        // En movil arranca justo debajo del logo, que crece con la pantalla
+        style={
+          esEscritorio && !pantallaCompleta
+            ? { left: borde.izq }
+            : borde.arriba > 66
+              ? { top: borde.arriba }
+              : undefined
+        }
         className={[
           'absolute bottom-[44px] left-0 top-[66px] z-10 flex w-[70px] flex-col sm:bottom-[60px] sm:top-[329px] sm:w-[279px] sm:pl-3 sm:pr-1',
           pantallaCompleta ? 'hidden' : ''
@@ -896,7 +876,7 @@ export default function App() {
         )}
 
         {!conEscena && !sinMedia && enContacto && (
-          <PantallaContacto alParticipar={PARTICIPAR ? irAParticipar : null} />
+          <PantallaContacto />
         )}
 
         {!conEscena && !sinMedia && rutaSub && COMICS[rutaSub] && (
@@ -926,7 +906,13 @@ export default function App() {
 
       <img
         ref={logoCabecera}
-        style={esEscritorio && !pantallaCompleta ? { left: borde.izq } : undefined}
+        style={
+          esEscritorio && !pantallaCompleta
+            ? { left: borde.izq }
+            : borde.arriba > 0
+              ? { width: borde.arriba, height: borde.arriba }
+              : undefined
+        }
         src="/logo-tajopages.webp"
         alt={t('hero.title')}
         width={800}
@@ -941,12 +927,19 @@ export default function App() {
         ref={sloganCabecera}
         style={esEscritorio && !pantallaCompleta ? { left: borde.izq } : undefined}
         className={[
-          'absolute left-[72px] right-[110px] top-[20px] z-10 whitespace-pre text-center font-mono text-[0.78rem] uppercase leading-snug tracking-[0.06em] text-crema',
-          'sm:left-0 sm:ml-[14px] sm:right-auto sm:top-[268px] sm:w-[263px] sm:text-[1.09rem] sm:tracking-[0em]',
+          // Va en dos lineas en los dos tamanios. En movil, centrado en la misma
+          // altura que el selector de idioma, que tiene su centro en 35px
+          'absolute left-[72px] right-[110px] top-[35px] z-10 -translate-y-1/2 text-center font-mono text-[1.05rem] uppercase leading-tight tracking-[0.06em] text-crema',
+          'sm:left-0 sm:ml-[14px] sm:right-auto sm:top-[268px] sm:w-[263px] sm:translate-y-0 sm:text-[1.09rem] sm:tracking-[0em]',
           intro === 'fuera' ? 'opacity-100' : 'opacity-0'
         ].join(' ')}
       >
-        {t('hero.slogan')}
+        {/* El bloque va centrado en su hueco y las dos lineas alineadas entre si */}
+        <span className="inline-block text-left">
+          {t('hero.slogan').split(' ')[0]}
+          <br />
+          {t('hero.slogan').split(' ').slice(1).join(' ')}
+        </span>
       </p>
 
       {intro !== 'fuera' && (

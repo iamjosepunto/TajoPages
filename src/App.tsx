@@ -236,7 +236,7 @@ function LectorComic({ comic }: { comic: string }) {
   const ladoFlecha =
     'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-end disabled:cursor-default disabled:opacity-0'
   const circuloFlecha =
-    'flex items-center justify-center rounded-full bg-crema text-deep shadow-lg transition-colors group-hover:bg-accent'
+    'flex items-center justify-center rounded-full border border-black bg-crema/50 text-deep shadow-lg transition-colors group-hover:bg-accent'
   const medidaCirculo = { width: '13.75cqw', height: '13.75cqw' }
   // Chevron dibujado, no el caracter < o >: asi queda centrado de verdad en el
   // circulo y su tamanio y grosor no dependen de la tipografia

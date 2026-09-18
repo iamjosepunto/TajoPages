@@ -88,7 +88,8 @@
   },
   "lector": {
     "leer": "Read comic",
-    "capitulo": "Chapter"
+    "capitulo": "Chapter",
+    "indice": "Contents"
   },
   "capitulos": {
     "celestial-invader": {

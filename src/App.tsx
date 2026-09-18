@@ -196,27 +196,33 @@ function EscenaIntroduccion({
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
-// leer, cada capitulo se abre con su caratula y cada vineta va de borde a borde
-// sobre su texto. No es ciclico: desde la caratula del primer capitulo se vuelve
-// a la portada y la ultima vineta no avanza mas
+// leer, detras va el indice de capitulos, cada capitulo se abre con su caratula y
+// cada vineta va de borde a borde sobre su texto. No es ciclico: desde la portada
+// no se retrocede y la ultima vineta no avanza mas
 function LectorComic({ comic }: { comic: string }) {
   const { t, i18n } = useTranslation()
   const datos = COMICS[comic]
   const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
   const [pagina, setPagina] = useState(0)
-  // La secuencia del lector: la portada, y luego cada capitulo con su caratula
-  // por delante de sus vinetas. Todo lo demas se deduce de aqui
+  // La secuencia del lector: la portada, el indice, y luego cada capitulo con su
+  // caratula por delante de sus vinetas. Todo lo demas se deduce de aqui
   const paginas: {
-    tipo: 'portada' | 'caratula' | 'vineta'
+    tipo: 'portada' | 'indice' | 'caratula' | 'vineta'
     capitulo: number
     vineta: number
     enCapitulo: number
     delCapitulo: number
-  }[] = [{ tipo: 'portada', capitulo: 0, vineta: 0, enCapitulo: 0, delCapitulo: 0 }]
+  }[] = [
+    { tipo: 'portada', capitulo: 0, vineta: 0, enCapitulo: 0, delCapitulo: 0 },
+    { tipo: 'indice', capitulo: 0, vineta: 0, enCapitulo: 0, delCapitulo: 0 }
+  ]
+  // En que pagina empieza cada capitulo, para que el indice pueda saltar a su caratula
+  const inicioCapitulo: number[] = []
   let primera = 1
   datos.capitulos.forEach((fin, i) => {
     const ultimaDelCapitulo = Math.min(fin, datos.vinetas)
     const cuantas = ultimaDelCapitulo - primera + 1
+    inicioCapitulo.push(paginas.length)
     paginas.push({ tipo: 'caratula', capitulo: i + 1, vineta: 0, enCapitulo: 0, delCapitulo: cuantas })
     for (let v = primera; v <= ultimaDelCapitulo; v++) {
       paginas.push({
@@ -238,10 +244,15 @@ function LectorComic({ comic }: { comic: string }) {
   const capituloCod = String(actual.capitulo).padStart(2, '0')
   const carpetaCapitulo = `${datos.carpeta}/capitulo-${capituloCod}`
   const tituloCapitulo = t(`capitulos.${comic}.${actual.capitulo}`)
-  // El contador lleva delante el capitulo, y cuenta dentro de el
+  // El contador lleva delante el capitulo, y cuenta dentro de el. El indice no
+  // pertenece a ningun capitulo, asi que en su sitio lleva su propio rotulo
   const romano = ROMANOS[actual.capitulo - 1]
   const contador =
-    actual.tipo === 'vineta' ? `${romano} · ${actual.enCapitulo} / ${actual.delCapitulo}` : romano
+    actual.tipo === 'vineta'
+      ? `${romano} · ${actual.enCapitulo} / ${actual.delCapitulo}`
+      : actual.tipo === 'indice'
+        ? t('lector.indice')
+        : romano
 
   // La barra inferior es la misma en las caratulas y en las vinetas
   const barra = (
@@ -317,6 +328,46 @@ function LectorComic({ comic }: { comic: string }) {
           >
             {t('lector.leer')}
           </button>
+        </>
+      ) : actual.tipo === 'indice' ? (
+        <>
+          {/* El indice: los ocho capitulos con su romano y su titulo, cada uno
+              lleva directo a su caratula */}
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '7cqw 6cqw' }}>
+            <h2
+              className="text-center font-mono uppercase text-muted"
+              style={{ fontSize: '4.5cqw', letterSpacing: '0.3em', lineHeight: 1 }}
+            >
+              {t('lector.indice')}
+            </h2>
+            <ul style={{ marginTop: '6cqw' }}>
+              {datos.capitulos.map((_, i) => (
+                <li key={ROMANOS[i]} className="border-b border-line/40">
+                  <button
+                    type="button"
+                    onClick={() => setPagina(inicioCapitulo[i])}
+                    className="flex w-full cursor-pointer items-baseline text-left text-enlace transition-colors hover:text-accent"
+                    style={{ gap: '4cqw', padding: '3.5cqw 1cqw' }}
+                  >
+                    <span
+                      className="shrink-0 text-right font-mono text-muted"
+                      style={{ width: '10cqw', fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+                    >
+                      {ROMANOS[i]}
+                    </span>
+                    <span
+                      className="uppercase"
+                      style={{ fontSize: '6cqw', letterSpacing: '0.04em', lineHeight: 1.2 }}
+                    >
+                      {t(`capitulos.${comic}.${i + 1}`)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {barra}
         </>
       ) : actual.tipo === 'caratula' ? (
         <>

@@ -173,6 +173,10 @@ const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 // desde el indice a la portada
 function LectorComic({ comic }: { comic: string }) {
   const { t, i18n } = useTranslation()
+  // La pantalla completa es del navegador: el estado solo se enciende si la
+  // concede de verdad, asi nunca deja la pagina a medias
+  const caja = useRef<HTMLDivElement>(null)
+  const [aPantalla, setAPantalla] = useState(false)
   const datos = COMICS[comic]
   const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
   const [pagina, setPagina] = useState(0)
@@ -221,7 +225,7 @@ function LectorComic({ comic }: { comic: string }) {
   const romano = ROMANOS[actual.capitulo - 1]
   const contador =
     actual.tipo === 'vineta'
-      ? `${romano} · ${actual.enCapitulo} / ${actual.delCapitulo}`
+      ? `${romano} · ${actual.enCapitulo}/${actual.delCapitulo}`
       : actual.tipo === 'indice'
         ? t('lector.indice')
         : romano
@@ -230,7 +234,7 @@ function LectorComic({ comic }: { comic: string }) {
   // Cada una va en un circulo crema opaco para que se lea sobre cualquier fondo,
   // y se desvanece cuando no hay pagina a la que ir
   const ladoFlecha =
-    'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-center disabled:cursor-default disabled:opacity-0'
+    'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-end disabled:cursor-default disabled:opacity-0'
   const circuloFlecha =
     'flex items-center justify-center rounded-full bg-crema text-deep shadow-lg transition-colors group-hover:bg-accent'
   const medidaCirculo = { width: '13.75cqw', height: '13.75cqw' }
@@ -264,7 +268,7 @@ function LectorComic({ comic }: { comic: string }) {
         disabled={pagina === 0}
         aria-label={t('paneles.anterior')}
         className={`${ladoFlecha} left-0 justify-start`}
-        style={{ width: '17%', paddingLeft: '2.5cqw' }}
+        style={{ width: '17%', paddingLeft: '2.5cqw', paddingBottom: '3cqw' }}
       >
         <span className={circuloFlecha} style={medidaCirculo}>
           {chevron(false)}
@@ -276,7 +280,7 @@ function LectorComic({ comic }: { comic: string }) {
         disabled={pagina === ultima}
         aria-label={t('paneles.siguiente')}
         className={`${ladoFlecha} right-0 justify-end`}
-        style={{ width: '17%', paddingRight: '2.5cqw' }}
+        style={{ width: '17%', paddingRight: '2.5cqw', paddingBottom: '3cqw' }}
       >
         <span className={circuloFlecha} style={medidaCirculo}>
           {chevron(true)}
@@ -285,156 +289,228 @@ function LectorComic({ comic }: { comic: string }) {
     </div>
   )
 
+  useEffect(() => {
+    const mirar = () => setAPantalla(document.fullscreenElement === caja.current)
+    document.addEventListener('fullscreenchange', mirar)
+    return () => document.removeEventListener('fullscreenchange', mirar)
+  }, [])
+
+  // Al volver a la portada se sale de la pantalla completa, venga de donde venga:
+  // del boton VOLVER, de la flecha o del teclado
+  useEffect(() => {
+    if (pagina === 0 && document.fullscreenElement === caja.current) {
+      void document.exitFullscreen()
+    }
+  }, [pagina])
+
+  const alternarPantalla = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen()
+      return
+    }
+    void caja.current?.requestFullscreen?.().catch(() => undefined)
+  }
+
+  // Icono de pantalla completa: cuatro esquinas que se abren o se cierran
+  const iconoPantalla = (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ width: '6.5cqw', height: '6.5cqw' }}
+    >
+      {aPantalla ? (
+        <>
+          <path d="M9 4v5H4" />
+          <path d="M15 4v5h5" />
+          <path d="M9 20v-5H4" />
+          <path d="M15 20v-5h5" />
+        </>
+      ) : (
+        <>
+          <path d="M4 9V4h5" />
+          <path d="M20 9V4h-5" />
+          <path d="M4 15v5h5" />
+          <path d="M20 15v5h-5" />
+        </>
+      )}
+    </svg>
+  )
+
   // La barra inferior es la misma en las caratulas y en las vinetas
   const barra = (
     <div
       className="flex items-center justify-between border-t border-line/60"
-      style={{ padding: '3cqw 5cqw' }}
+      style={{ padding: '3cqw 3cqw' }}
     >
       <button
         type="button"
         onClick={() => setPagina(actual.tipo === 'indice' ? 0 : 1)}
-        className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
+        className="cursor-pointer whitespace-nowrap font-mono uppercase text-enlace transition-colors hover:text-accent"
         style={{ fontSize: '6.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
       >
         {`<< ${t('subs.volver')}`}
       </button>
 
       {/* Ya sin flechas: la navegacion va en los laterales de la imagen */}
-      <span
-        className="whitespace-nowrap font-mono text-muted"
-        style={{ fontSize: '5.85cqw', letterSpacing: '0.1em', lineHeight: 1 }}
-      >
-        {contador}
-      </span>
+      <div className="flex items-center" style={{ gap: '4cqw' }}>
+        <span
+          className="whitespace-nowrap font-mono text-muted"
+          style={{ fontSize: '4.8cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+        >
+          {contador}
+        </span>
+        <button
+          type="button"
+          onClick={alternarPantalla}
+          aria-label={t('lector.pantalla')}
+          title={t('lector.pantalla')}
+          className="flex cursor-pointer items-center text-enlace transition-colors hover:text-accent"
+        >
+          {iconoPantalla}
+        </button>
+      </div>
     </div>
   )
 
   return (
-    <div
-      className="relative flex h-full w-full flex-col border border-crema bg-fondo"
-      style={{ containerType: 'size' }}
-      onKeyDown={(e) => {
-        if (e.key === 'ArrowLeft') ir(-1)
-        if (e.key === 'ArrowRight') ir(1)
-      }}
-      tabIndex={0}
-    >
-      {pagina === 0 ? (
-        <>
-          <img
-            src={`${datos.carpeta}/portada-${idioma}.webp`}
-            alt={t('comics.portada')}
-            width={576}
-            height={1280}
-            className="h-full w-full object-cover"
-          />
-          {/* Centrado en la franja inferior de la portada, entre el numero y el sello */}
-          <button
-            type="button"
-            onClick={() => ir(1)}
-            className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-crema"
-            style={{ bottom: '3.5cqw', padding: '3cqw 4.5cqw', fontSize: '5.5cqw', letterSpacing: '0.12em', lineHeight: 1, borderRadius: '1cqw' }}
-          >
-            {t('lector.leer')}
-          </button>
-        </>
-      ) : actual.tipo === 'indice' ? (
-        <>
-          {/* El indice: los ocho capitulos con su romano y su titulo, cada uno
-              lleva directo a su caratula */}
-          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '7cqw 6cqw' }}>
-            <h2
-              className="text-center font-mono uppercase text-muted"
-              style={{ fontSize: '4.5cqw', letterSpacing: '0.3em', lineHeight: 1 }}
-            >
-              {t('lector.indice')}
-            </h2>
-            <ul style={{ marginTop: '6cqw' }}>
-              {datos.capitulos.map((_, i) => (
-                <li key={ROMANOS[i]} className="border-b border-line/40">
-                  <button
-                    type="button"
-                    onClick={() => setPagina(inicioCapitulo[i])}
-                    className="flex w-full cursor-pointer items-baseline text-left text-enlace transition-colors hover:text-accent"
-                    style={{ gap: '4cqw', padding: '3.5cqw 1cqw' }}
+    <div ref={caja} className={aPantalla ? 'relative h-full w-full bg-fondo' : 'h-full w-full'}>
+      {/* La capa de dentro lleva la proporcion: al elemento que entra en pantalla
+          completa el navegador le impone el 100% y no se le puede ganar */}
+      <div
+        className={aPantalla ? 'absolute inset-y-0 left-1/2 -translate-x-1/2' : 'h-full w-full'}
+        style={aPantalla ? { aspectRatio: '720 / 1606' } : undefined}
+      >
+        <div
+          className="relative flex h-full w-full flex-col border border-crema bg-fondo"
+          style={{ containerType: 'size' }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') ir(-1)
+            if (e.key === 'ArrowRight') ir(1)
+          }}
+          tabIndex={0}
+        >
+          {pagina === 0 ? (
+            <>
+              <img
+                src={`${datos.carpeta}/portada-${idioma}.webp`}
+                alt={t('comics.portada')}
+                width={576}
+                height={1280}
+                className="h-full w-full object-cover"
+              />
+              {/* Centrado en la franja inferior de la portada, entre el numero y el sello */}
+              <button
+                type="button"
+                onClick={() => ir(1)}
+                className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-crema"
+                style={{ bottom: '3.5cqw', padding: '3cqw 4.5cqw', fontSize: '5.5cqw', letterSpacing: '0.12em', lineHeight: 1, borderRadius: '1cqw' }}
+              >
+                {t('lector.leer')}
+              </button>
+            </>
+          ) : actual.tipo === 'indice' ? (
+            <>
+              {/* El indice: los ocho capitulos con su romano y su titulo, cada uno
+                  lleva directo a su caratula */}
+              <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '7cqw 6cqw' }}>
+                <h2
+                  className="text-center font-mono uppercase text-muted"
+                  style={{ fontSize: '4.5cqw', letterSpacing: '0.3em', lineHeight: 1 }}
+                >
+                  {t('lector.indice')}
+                </h2>
+                <ul style={{ marginTop: '6cqw' }}>
+                  {datos.capitulos.map((_, i) => (
+                    <li key={ROMANOS[i]} className="border-b border-line/40">
+                      <button
+                        type="button"
+                        onClick={() => setPagina(inicioCapitulo[i])}
+                        className="flex w-full cursor-pointer items-baseline text-left text-enlace transition-colors hover:text-accent"
+                        style={{ gap: '4cqw', padding: '3.5cqw 1cqw' }}
+                      >
+                        <span
+                          className="shrink-0 text-right font-mono text-muted"
+                          style={{ width: '10cqw', fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+                        >
+                          {ROMANOS[i]}
+                        </span>
+                        <span
+                          className="uppercase"
+                          style={{ fontSize: '6cqw', letterSpacing: '0.04em', lineHeight: 1.2 }}
+                        >
+                          {t(`capitulos.${comic}.${i + 1}`)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {barra}
+            </>
+          ) : actual.tipo === 'caratula' ? (
+            <>
+              {/* La caratula es un pergamino de 576x976 con el tercio de arriba
+                  limpio: ahi es donde cae el rotulo del capitulo */}
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <div className="relative w-full">
+                  <img
+                    src={`${carpetaCapitulo}/caratula-${capituloCod}.webp`}
+                    alt={tituloCapitulo}
+                    width={576}
+                    height={976}
+                    className="aspect-[576/976] w-full object-cover"
+                  />
+                  <div
+                    className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center"
+                    style={{ height: '33%', padding: '0 9cqw' }}
                   >
                     <span
-                      className="shrink-0 text-right font-mono text-muted"
-                      style={{ width: '10cqw', fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+                      className="font-mono uppercase text-deep/70"
+                      style={{ fontSize: '5.6cqw', letterSpacing: '0.3em', lineHeight: 1 }}
                     >
-                      {ROMANOS[i]}
+                      {`${t('lector.capitulo')} ${romano}`}
                     </span>
                     <span
-                      className="uppercase"
-                      style={{ fontSize: '6cqw', letterSpacing: '0.04em', lineHeight: 1.2 }}
+                      className="uppercase text-deep"
+                      style={{ fontSize: '12.6cqw', letterSpacing: '0.05em', lineHeight: 1.15, marginTop: '4cqw' }}
                     >
-                      {t(`capitulos.${comic}.${i + 1}`)}
+                      {tituloCapitulo}
                     </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  </div>
+                </div>
+              </div>
 
-          {barra}
-        </>
-      ) : actual.tipo === 'caratula' ? (
-        <>
-          {/* La caratula es un pergamino de 576x976 con el tercio de arriba
-              limpio: ahi es donde cae el rotulo del capitulo */}
-          <div className="flex min-h-0 flex-1 items-center justify-center">
-            <div className="relative w-full">
+              {barra}
+            </>
+          ) : (
+            <>
+              {/* Las vinetas se dibujan a 576x976: ocupan todo el ancho, tocando los
+                  bordes, y dejan debajo sitio para textos de hasta tres lineas */}
               <img
-                src={`${carpetaCapitulo}/caratula-${capituloCod}.webp`}
-                alt={tituloCapitulo}
+                src={`${carpetaCapitulo}/vineta-${capituloCod}-${codigo}.webp`}
+                alt={texto}
                 width={576}
                 height={976}
-                className="aspect-[576/976] w-full object-cover"
+                className="aspect-[576/976] w-full shrink-0 object-cover"
               />
-              <div
-                className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center"
-                style={{ height: '33%', padding: '0 9cqw' }}
-              >
-                <span
-                  className="font-mono uppercase text-deep/70"
-                  style={{ fontSize: '5.6cqw', letterSpacing: '0.3em', lineHeight: 1 }}
-                >
-                  {`${t('lector.capitulo')} ${romano}`}
-                </span>
-                <span
-                  className="uppercase text-deep"
-                  style={{ fontSize: '12.6cqw', letterSpacing: '0.05em', lineHeight: 1.15, marginTop: '4cqw' }}
-                >
-                  {tituloCapitulo}
-                </span>
+              <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
+                <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
+                  {texto}
+                </p>
               </div>
-            </div>
-          </div>
+              {barra}
+            </>
+          )}
 
-          {barra}
-        </>
-      ) : (
-        <>
-          {/* Las vinetas se dibujan a 576x976: ocupan todo el ancho, tocando los
-              bordes, y dejan debajo sitio para textos de hasta tres lineas */}
-          <img
-            src={`${carpetaCapitulo}/vineta-${capituloCod}-${codigo}.webp`}
-            alt={texto}
-            width={576}
-            height={976}
-            className="aspect-[576/976] w-full shrink-0 object-cover"
-          />
-          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
-            <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
-              {texto}
-            </p>
-          </div>
-          {barra}
-        </>
-      )}
-
-      {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
+          {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
+        </div>
+      </div>
     </div>
   )
 }

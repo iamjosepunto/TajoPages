@@ -232,8 +232,24 @@ function LectorComic({ comic }: { comic: string }) {
   const ladoFlecha =
     'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-center disabled:cursor-default disabled:opacity-0'
   const circuloFlecha =
-    'flex items-center justify-center rounded-full bg-crema font-mono text-deep shadow-lg transition-colors group-hover:bg-accent'
-  const medidaCirculo = { width: '11cqw', height: '11cqw', fontSize: '6.5cqw', lineHeight: 1 }
+    'flex items-center justify-center rounded-full bg-crema text-deep shadow-lg transition-colors group-hover:bg-accent'
+  const medidaCirculo = { width: '13.75cqw', height: '13.75cqw' }
+  // Chevron dibujado, no el caracter < o >: asi queda centrado de verdad en el
+  // circulo y su tamanio y grosor no dependen de la tipografia
+  const chevron = (haciaDelante: boolean) => (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ width: '13cqw', height: '13cqw' }}
+    >
+      <path d={haciaDelante ? 'M9 4.5 L16.5 12 L9 19.5' : 'M15 4.5 L7.5 12 L15 19.5'} />
+    </svg>
+  )
   // Van ancladas arriba y con el alto exacto de una vineta, 976/576 del ancho,
   // para quedar a la misma altura en las vinetas y en las caratulas, que se
   // centran en su hueco
@@ -251,7 +267,7 @@ function LectorComic({ comic }: { comic: string }) {
         style={{ width: '17%', paddingLeft: '2.5cqw' }}
       >
         <span className={circuloFlecha} style={medidaCirculo}>
-          &lt;
+          {chevron(false)}
         </span>
       </button>
       <button
@@ -263,7 +279,7 @@ function LectorComic({ comic }: { comic: string }) {
         style={{ width: '17%', paddingRight: '2.5cqw' }}
       >
         <span className={circuloFlecha} style={medidaCirculo}>
-          &gt;
+          {chevron(true)}
         </span>
       </button>
     </div>

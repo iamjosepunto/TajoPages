@@ -128,23 +128,21 @@ function setMeta(selector: string, content: string) {
 }
 
 // Escena de INTRODUCCION: todo dibujado en codigo salvo el logo, que se trae
-// del archivo. Las zonas de abajo llevan cada una a su propia subruta
+// del archivo. Debajo del logo van los textos de la seccion, uno tras otro en
+// la misma pagina
 function EscenaIntroduccion({
   titulo,
-  etiquetas,
-  alPulsar
+  bloques
 }: {
   titulo: string
-  etiquetas: string[]
-  alPulsar: (sub: number) => void
+  bloques: { titulo: string; texto: string }[]
 }) {
-  const ALTO = 150
-  const HUECO = 44
+  const ALTO = 213
+  const HUECO = 36
   const LOGO_Y = 70
   const LOGO_LADO = 720
-  // La primera zona arranca un hueco por debajo de la base del logo: asi la
-  // separacion con el logo es la misma que la que hay entre zonas
-  const PRIMERA = LOGO_Y + LOGO_LADO + HUECO
+  // El primer bloque arranca un hueco por debajo de la base del logo
+  const PRIMERA = LOGO_Y + LOGO_LADO + 44
 
   return (
     <svg
@@ -157,37 +155,21 @@ function EscenaIntroduccion({
 
       <image x="0" y={LOGO_Y} width={LOGO_LADO} height={LOGO_LADO} href="/logo-tajopages.webp" />
 
-      {etiquetas.map((texto, i) => (
-        <g
-          key={texto}
-          role="button"
-          tabIndex={0}
-          aria-label={texto}
-          onClick={() => alPulsar(i)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              alPulsar(i)
-            }
-          }}
-          className="group cursor-pointer"
+      {bloques.map((bloque, i) => (
+        <foreignObject
+          key={bloque.titulo}
+          x="70"
+          y={PRIMERA + i * (ALTO + HUECO)}
+          width="580"
+          height={ALTO}
         >
-          <rect
-            x="70"
-            y={PRIMERA + i * (ALTO + HUECO)}
-            width="580"
-            height={ALTO}
-            className="fill-transparent stroke-crema transition-colors group-hover:fill-crema/15"
-            strokeWidth="2"
-          />
-          <foreignObject x="70" y={PRIMERA + i * (ALTO + HUECO)} width="580" height={ALTO}>
-            <div
-              className="flex h-full w-full items-center justify-center px-8 text-center font-mono text-[34px] uppercase leading-tight tracking-[2px] text-enlace transition-colors group-hover:text-accent"
-            >
-              {texto}
-            </div>
-          </foreignObject>
-        </g>
+          <div className="flex h-full w-full flex-col justify-center">
+            <h2 className="font-mono text-[34px] uppercase leading-tight tracking-[2px] text-accent">
+              {bloque.titulo}
+            </h2>
+            <p className="mt-3 text-[31px] leading-[1.5] text-ink/80">{bloque.texto}</p>
+          </div>
+        </foreignObject>
       ))}
     </svg>
   )
@@ -198,7 +180,8 @@ const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
 // leer, detras va el indice de capitulos, cada capitulo se abre con su caratula y
 // cada vineta va de borde a borde sobre su texto. No es ciclico: desde la portada
-// no se retrocede y la ultima vineta no avanza mas
+// no se retrocede y la ultima vineta no avanza mas. VOLVER lleva al indice, y
+// desde el indice a la portada
 function LectorComic({ comic }: { comic: string }) {
   const { t, i18n } = useTranslation()
   const datos = COMICS[comic]
@@ -262,7 +245,7 @@ function LectorComic({ comic }: { comic: string }) {
     >
       <button
         type="button"
-        onClick={() => setPagina(0)}
+        onClick={() => setPagina(actual.tipo === 'indice' ? 0 : 1)}
         className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
         style={{ fontSize: '5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
       >
@@ -905,8 +888,10 @@ export default function App() {
         {conEscena && tabla && (
           <EscenaIntroduccion
             titulo={t(`secciones.v${seccion}`)}
-            etiquetas={tabla.en.map((slug) => t(`subs.${slug}`))}
-            alPulsar={elegirSub}
+            bloques={(PANELES[tabla.en[0]] ?? []).map((panel) => ({
+              titulo: t(`paneles.${tabla.en[0]}.${panel.clave}.titulo`),
+              texto: t(`paneles.${tabla.en[0]}.${panel.clave}.texto`)
+            }))}
           />
         )}
 

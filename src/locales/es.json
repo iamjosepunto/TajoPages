@@ -46,15 +46,15 @@
     "what-it-is": {
       "p1": {
         "titulo": "Qué es Tajo Pages",
-        "texto": "Tajo Pages es una marca de cómics nacida en Toledo, con historias pensadas para leerse página a página."
+        "texto": "Tajo Pages es una marca española de cómics que acaba de nacer."
       },
       "p2": {
-        "titulo": "Dónde se publica",
-        "texto": "Aquí, en tajo.page. Esta web es la casa de la marca y el lugar donde se irán publicando sus historias."
+        "titulo": "Las sagas",
+        "texto": "Sus historias se agrupan en sagas. La primera se llama TOLETUM."
       },
       "p3": {
-        "titulo": "En qué punto está",
-        "texto": "Tajo Pages acaba de empezar. Los primeros cómics aparecerán en la sección Cómics en cuanto estén listos."
+        "titulo": "Lo que viene",
+        "texto": "TOLETUM es solo el principio: con el tiempo llegarán muchas sagas más."
       }
     },
     "the-name": {

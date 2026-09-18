@@ -46,15 +46,15 @@
     "what-it-is": {
       "p1": {
         "titulo": "What Tajo Pages is",
-        "texto": "Tajo Pages is a comic book brand born in Toledo, with stories made to be read page by page."
+        "texto": "Tajo Pages is a Spanish comic book brand that has only just been born."
       },
       "p2": {
-        "titulo": "Where it is published",
-        "texto": "Right here, at tajo.page. This website is the home of the brand and the place where its stories will be published."
+        "titulo": "The sagas",
+        "texto": "Its stories are grouped into sagas. The first one is called TOLETUM."
       },
       "p3": {
-        "titulo": "Where it stands",
-        "texto": "Tajo Pages has only just started. The first comics will appear in the Comics section as soon as they are ready."
+        "titulo": "What is coming",
+        "texto": "TOLETUM is only the beginning: many more sagas will arrive over time."
       }
     },
     "the-name": {

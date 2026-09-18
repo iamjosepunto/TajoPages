@@ -295,7 +295,7 @@ function LectorComic({ comic }: { comic: string }) {
         type="button"
         onClick={() => setPagina(actual.tipo === 'indice' ? 0 : 1)}
         className="cursor-pointer font-mono uppercase text-enlace transition-colors hover:text-accent"
-        style={{ fontSize: '5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+        style={{ fontSize: '6.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
       >
         {`<< ${t('subs.volver')}`}
       </button>
@@ -303,7 +303,7 @@ function LectorComic({ comic }: { comic: string }) {
       {/* Ya sin flechas: la navegacion va en los laterales de la imagen */}
       <span
         className="whitespace-nowrap font-mono text-muted"
-        style={{ fontSize: '4.5cqw', letterSpacing: '0.1em', lineHeight: 1 }}
+        style={{ fontSize: '5.85cqw', letterSpacing: '0.1em', lineHeight: 1 }}
       >
         {contador}
       </span>
@@ -398,13 +398,13 @@ function LectorComic({ comic }: { comic: string }) {
               >
                 <span
                   className="font-mono uppercase text-deep/70"
-                  style={{ fontSize: '4cqw', letterSpacing: '0.3em', lineHeight: 1 }}
+                  style={{ fontSize: '5.6cqw', letterSpacing: '0.3em', lineHeight: 1 }}
                 >
                   {`${t('lector.capitulo')} ${romano}`}
                 </span>
                 <span
                   className="uppercase text-deep"
-                  style={{ fontSize: '9cqw', letterSpacing: '0.05em', lineHeight: 1.15, marginTop: '4cqw' }}
+                  style={{ fontSize: '12.6cqw', letterSpacing: '0.05em', lineHeight: 1.15, marginTop: '4cqw' }}
                 >
                   {tituloCapitulo}
                 </span>
@@ -425,8 +425,8 @@ function LectorComic({ comic }: { comic: string }) {
             height={976}
             className="aspect-[576/976] w-full shrink-0 object-cover"
           />
-          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '4cqw 5cqw' }}>
-            <p className="text-ink/80" style={{ fontSize: '6cqw', lineHeight: 1.65 }}>
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
+            <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
               {texto}
             </p>
           </div>

@@ -52,6 +52,9 @@ const COMICS: Record<string, { carpeta: string; vinetas: number; capitulos: numb
 // a las suyas desde las zonas clicables de su escena
 const CON_SUBMENU = ['comics']
 
+// Donde se recuerda que el aviso del teclado ya se enseño
+const AVISO_TECLADO = 'tajopages.aviso-teclado'
+
 // Aire entre el borde derecho de la imagen y lo que se apoya en ella
 const SEPARACION = 5
 
@@ -213,6 +216,12 @@ function LectorComic({ comic }: { comic: string }) {
   // Que pagina ha terminado de cargar su imagen. Al cambiar de pagina el valor
   // deja de coincidir y vuelve a salir el spinner, sin efectos de por medio
   const [cargadaEn, setCargadaEn] = useState(-1)
+  // Aviso de que se puede pasar pagina con el teclado: se queda en todas las
+  // paginas hasta que se pulsa el boton
+  const [aviso, setAviso] = useState(false)
+  // En un movil no hay teclado que usar. Se vigila el ancho en vez de mirarlo una
+  // sola vez, para que el cartel se retire tambien al estrechar la ventana
+  const [conTeclado, setConTeclado] = useState(false)
   const datos = COMICS[comic]
   const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
   const [pagina, setPagina] = useState(0)
@@ -248,7 +257,15 @@ function LectorComic({ comic }: { comic: string }) {
     primera = fin + 1
   })
   const ultima = paginas.length - 1
-  const ir = (paso: number) => setPagina((n) => Math.min(Math.max(n + paso, 0), ultima))
+  // La primera caratula: leyendo el comic las flechas no bajan de aqui, para
+  // volver al indice o a la portada esta el boton VOLVER
+  const PRIMERA_DEL_COMIC = 2
+  const ir = (paso: number) =>
+    setPagina((n) => {
+      const destino = Math.min(Math.max(n + paso, 0), ultima)
+      const enElComic = paginas[n].tipo === 'caratula' || paginas[n].tipo === 'vineta'
+      return enElComic ? Math.max(destino, PRIMERA_DEL_COMIC) : destino
+    })
   const actual = paginas[pagina]
   const codigo = String(actual.vineta).padStart(3, '0')
   const texto = actual.tipo === 'vineta' ? t(`vinetas.${comic}.${codigo}`) : ''
@@ -270,13 +287,14 @@ function LectorComic({ comic }: { comic: string }) {
   // Cada una va en un circulo crema opaco para que se lea sobre cualquier fondo,
   // y se desvanece cuando no hay pagina a la que ir
   const ladoFlecha =
-    'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-end disabled:cursor-default disabled:opacity-0'
+    // Sin anillo de foco: su zona ocupa todo el alto y el borde cruzaria la vineta
+    'group pointer-events-auto absolute inset-y-0 flex cursor-pointer items-end outline-none disabled:cursor-default disabled:opacity-0'
   const circuloFlecha =
-    'flex items-center justify-center rounded-full border border-black bg-crema/50 text-deep shadow-lg transition-colors group-hover:bg-accent'
+    'flex items-center justify-center rounded-full border border-black bg-crema/50 text-deep shadow-lg transition-colors group-hover:bg-accent group-focus-visible:bg-accent'
   const medidaCirculo = { width: '13.75cqw', height: '13.75cqw' }
   // Chevron dibujado, no el caracter < o >: asi queda centrado de verdad en el
   // circulo y su tamanio y grosor no dependen de la tipografia
-  const chevron = (haciaDelante: boolean) => (
+  const chevron = (haciaDelante: boolean, medida = '13cqw') => (
     <svg
       viewBox="0 0 24 24"
       fill="none"
@@ -285,7 +303,7 @@ function LectorComic({ comic }: { comic: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      style={{ width: '13cqw', height: '13cqw' }}
+      style={{ width: medida, height: medida }}
     >
       <path d={haciaDelante ? 'M9 4.5 L16.5 12 L9 19.5' : 'M15 4.5 L7.5 12 L15 19.5'} />
     </svg>
@@ -301,7 +319,7 @@ function LectorComic({ comic }: { comic: string }) {
       <button
         type="button"
         onClick={() => ir(-1)}
-        disabled={pagina === 0}
+        disabled={pagina <= PRIMERA_DEL_COMIC}
         aria-label={t('paneles.anterior')}
         className={`${ladoFlecha} left-0 justify-start`}
         style={{ width: '17%', paddingLeft: '2.5cqw', paddingBottom: '3cqw' }}
@@ -326,7 +344,10 @@ function LectorComic({ comic }: { comic: string }) {
   )
 
   useEffect(() => {
-    const mirar = () => setAPantalla(document.fullscreenElement === caja.current)
+    const mirar = () => {
+      const dentro = document.fullscreenElement === caja.current
+      setAPantalla(dentro)
+    }
     document.addEventListener('fullscreenchange', mirar)
     return () => document.removeEventListener('fullscreenchange', mirar)
   }, [])
@@ -338,6 +359,51 @@ function LectorComic({ comic }: { comic: string }) {
       void document.exitFullscreen()
     }
   }, [pagina])
+
+  // Las flechas del teclado pasan pagina sin que el lector tenga el foco, pero
+  // solo con el comic abierto: en la portada y en el indice no hacen nada
+  const leyendo = actual.tipo === 'caratula' || actual.tipo === 'vineta'
+  useEffect(() => {
+    if (!leyendo) return
+    const teclas = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      e.preventDefault()
+      ir(e.key === 'ArrowLeft' ? -1 : 1)
+    }
+    window.addEventListener('keydown', teclas)
+    return () => window.removeEventListener('keydown', teclas)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leyendo, ultima])
+
+  useEffect(() => {
+    const consulta = window.matchMedia('(min-width: 640px)')
+    const mirar = () => setConTeclado(consulta.matches)
+    mirar()
+    consulta.addEventListener('change', mirar)
+    return () => consulta.removeEventListener('change', mirar)
+  }, [])
+
+  // Sale al abrir el comic y no se va solo: hay que pulsar el boton
+  useEffect(() => {
+    if (!leyendo || aviso || !conTeclado) return
+    try {
+      if (localStorage.getItem(AVISO_TECLADO)) return
+    } catch {
+      return
+    }
+    setAviso(true)
+  }, [leyendo, aviso, conTeclado])
+
+  // La marca se guarda al pulsar, no al ensenarlo: si no, bastaria con recargar
+  // sin leerlo para perderlo para siempre
+  const cerrarAviso = () => {
+    setAviso(false)
+    try {
+      localStorage.setItem(AVISO_TECLADO, '1')
+    } catch {
+      // si el navegador no deja guardar, el aviso volvera a salir
+    }
+  }
 
   const alternarPantalla = () => {
     if (document.fullscreenElement) {
@@ -428,11 +494,6 @@ function LectorComic({ comic }: { comic: string }) {
         <div
           className="relative flex h-full w-full flex-col border border-crema bg-fondo"
           style={{ containerType: 'size' }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowLeft') ir(-1)
-            if (e.key === 'ArrowRight') ir(1)
-          }}
-          tabIndex={0}
         >
           {pagina === 0 ? (
             <>
@@ -555,6 +616,41 @@ function LectorComic({ comic }: { comic: string }) {
           )}
 
           {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
+
+          {aviso && conTeclado && leyendo && (
+            <div className="absolute inset-x-0 z-30 flex justify-center" style={{ bottom: '17cqw' }}>
+              {/* En dos lineas: el texto con sus teclas arriba y el boton debajo,
+                  porque todo seguido no cabe en el ancho del lector */}
+              <div
+                className="flex flex-col items-center rounded-[3cqw] bg-deep/90 font-mono uppercase text-crema shadow-lg"
+                style={{ padding: '3cqw 4cqw', gap: '2.6cqw', fontSize: '2.9cqw', letterSpacing: '0.08em', lineHeight: 1 }}
+              >
+                <span className="flex items-center" style={{ gap: '2.5cqw' }}>
+                  {t('lector.teclado')}
+                  {/* Las dos teclas que se pueden usar, dibujadas */}
+                  <span className="flex items-center" style={{ gap: '1.2cqw' }}>
+                    {[false, true].map((haciaDelante) => (
+                      <span
+                        key={String(haciaDelante)}
+                        className="flex items-center justify-center rounded border border-crema/70"
+                        style={{ width: '5.2cqw', height: '5.2cqw' }}
+                      >
+                        {chevron(haciaDelante, '3cqw')}
+                      </span>
+                    ))}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={cerrarAviso}
+                  className="cursor-pointer whitespace-nowrap rounded-full bg-accent font-mono uppercase text-deep transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-crema"
+                  style={{ padding: '1.8cqw 4cqw', letterSpacing: '0.08em', lineHeight: 1 }}
+                >
+                  {t('lector.entendido')}
+                </button>
+              </div>
+            </div>
+          )}
           {actual.tipo !== 'indice' && spinner}
         </div>
       </div>

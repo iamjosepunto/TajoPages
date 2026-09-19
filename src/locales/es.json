@@ -90,7 +90,9 @@
     "leer": "Leer cómic",
     "capitulo": "Capítulo",
     "indice": "Índice",
-    "pantalla": "Pantalla completa"
+    "pantalla": "Pantalla completa",
+    "teclado": "Pasa página con las flechas del teclado",
+    "entendido": "Entendido"
   },
   "capitulos": {
     "celestial-invader": {

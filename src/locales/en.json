@@ -90,7 +90,9 @@
     "leer": "Read comic",
     "capitulo": "Chapter",
     "indice": "Contents",
-    "pantalla": "Full screen"
+    "pantalla": "Full screen",
+    "teclado": "Turn the page with the arrow keys",
+    "entendido": "Got it"
   },
   "capitulos": {
     "celestial-invader": {

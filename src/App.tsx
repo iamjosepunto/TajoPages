@@ -1096,16 +1096,17 @@ export default function App() {
           // Va en dos lineas en los dos tamanios. En movil, centrado en la misma
           // altura que el selector de idioma, que tiene su centro en 35px
           'absolute left-[72px] right-[110px] top-[35px] z-10 -translate-y-1/2 text-center font-mono text-[1.05rem] uppercase leading-tight tracking-[0.06em] text-crema',
-          // En escritorio va centrado en el hueco entre el logo, que acaba en 263,
-          // y el menu, que empieza en 329: 66px de hueco para 44px de eslogan
-          'sm:left-0 sm:ml-[14px] sm:right-auto sm:top-[274px] sm:w-[263px] sm:translate-y-0 sm:text-[1.09rem] sm:tracking-[0em]',
+          // En escritorio va en una linea y centrado en el hueco entre el logo, que
+          // acaba en 263, y el menu, que empieza en 329: 66px de hueco para 22 de texto
+          'sm:left-0 sm:ml-[14px] sm:right-auto sm:top-[285px] sm:w-[263px] sm:translate-y-0 sm:text-[1.09rem] sm:tracking-[0em]',
           intro === 'fuera' ? 'opacity-100' : 'opacity-0'
         ].join(' ')}
       >
         {/* El bloque va centrado en su hueco y las dos lineas alineadas entre si */}
         <span className="inline-block text-left">
           {t('hero.slogan').split(' ')[0]}
-          <br />
+          {/* En escritorio el salto se oculta y queda el espacio, en una sola linea */}
+          <br className="sm:hidden" />{' '}
           {t('hero.slogan').split(' ').slice(1).join(' ')}
         </span>
       </p>

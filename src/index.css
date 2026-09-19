@@ -41,10 +41,11 @@
     color: var(--color-deep);
   }
 
+  /* Sin aro de foco en ninguna parte. Ojo: quien navegue con el tabulador deja
+     de ver donde esta, salvo donde el propio elemento marque el foco, como los
+     circulos de las flechas del lector */
   :focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-    border-radius: 3px;
+    outline: none;
   }
 }
 

@@ -1,5 +1,6 @@
 ﻿// UBICACION: src/App.tsx
 import { useEffect, useRef, useState } from 'react'
+import type { ComponentProps, CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import type { SupportedLanguage } from './i18n'
@@ -166,6 +167,38 @@ function EscenaIntroduccion({
 
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 
+// Aro que gira mientras una imagen no ha terminado de cargar
+function Spinner() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+    >
+      <span
+        className="animate-spin rounded-full border-crema/25 border-t-crema"
+        style={{ width: '20cqw', height: '20cqw', borderWidth: '2.2cqw' }}
+      />
+    </span>
+  )
+}
+
+// Imagen con su spinner encima hasta que carga. La envoltura recibe las medidas
+// que antes llevaba la imagen, para que el hueco sea exactamente el mismo
+function ImagenConSpinner({
+  caja,
+  estiloCaja,
+  ...resto
+}: ComponentProps<'img'> & { caja: string; estiloCaja?: CSSProperties }) {
+  const [lista, setLista] = useState(false)
+  const marcar = () => setLista(true)
+  return (
+    <div className={`relative ${caja}`} style={estiloCaja}>
+      <img {...resto} onLoad={marcar} onError={marcar} />
+      {!lista && <Spinner />}
+    </div>
+  )
+}
+
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
 // leer, detras va el indice de capitulos, cada capitulo se abre con su caratula y
 // cada vineta va de borde a borde sobre su texto. No es ciclico: desde la portada
@@ -177,6 +210,9 @@ function LectorComic({ comic }: { comic: string }) {
   // concede de verdad, asi nunca deja la pagina a medias
   const caja = useRef<HTMLDivElement>(null)
   const [aPantalla, setAPantalla] = useState(false)
+  // Que pagina ha terminado de cargar su imagen. Al cambiar de pagina el valor
+  // deja de coincidir y vuelve a salir el spinner, sin efectos de por medio
+  const [cargadaEn, setCargadaEn] = useState(-1)
   const datos = COMICS[comic]
   const idioma = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
   const [pagina, setPagina] = useState(0)
@@ -341,6 +377,10 @@ function LectorComic({ comic }: { comic: string }) {
     </svg>
   )
 
+  // Spinner mientras la imagen de la pagina no ha cargado
+  const marcarCargada = () => setCargadaEn(pagina)
+  const spinner = cargadaEn !== pagina && <Spinner />
+
   // La barra inferior es la misma en las caratulas y en las vinetas
   const barra = (
     <div
@@ -402,6 +442,8 @@ function LectorComic({ comic }: { comic: string }) {
                 width={576}
                 height={1280}
                 className="h-full w-full object-cover"
+                onLoad={marcarCargada}
+                onError={marcarCargada}
               />
               {/* Centrado en la franja inferior de la portada, entre el numero y el sello */}
               <button
@@ -465,6 +507,8 @@ function LectorComic({ comic }: { comic: string }) {
                     width={576}
                     height={976}
                     className="aspect-[576/976] w-full object-cover"
+                    onLoad={marcarCargada}
+                    onError={marcarCargada}
                   />
                   <div
                     className="absolute inset-x-0 top-0 flex flex-col items-center justify-center text-center"
@@ -498,6 +542,8 @@ function LectorComic({ comic }: { comic: string }) {
                 width={576}
                 height={976}
                 className="aspect-[576/976] w-full shrink-0 object-cover"
+                onLoad={marcarCargada}
+                onError={marcarCargada}
               />
               <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
                 <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
@@ -509,6 +555,7 @@ function LectorComic({ comic }: { comic: string }) {
           )}
 
           {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
+          {actual.tipo !== 'indice' && spinner}
         </div>
       </div>
     </div>
@@ -545,12 +592,13 @@ function Carrusel({
     >
       <div style={{ padding: '5cqw 5cqw 0' }}>
         {panel.imagen ? (
-          <img
+          <ImagenConSpinner
+            caja="aspect-square w-full"
             src={panel.imagen}
             alt={t(`${base}.titulo`)}
             width={900}
             height={900}
-            className="aspect-square w-full object-cover"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div
@@ -677,13 +725,14 @@ function PantallaContacto() {
       className="flex h-full w-full flex-col overflow-y-auto border border-crema bg-fondo"
       style={{ containerType: 'size' }}
     >
-      <img
+      <ImagenConSpinner
+        caja="w-full shrink-0"
+        estiloCaja={{ height: '31cqh', marginTop: '5cqw' }}
         src="/contacto.webp"
         alt={t('contacto.titulo')}
         width={900}
         height={900}
-        className="w-full object-cover"
-        style={{ height: '31cqh', marginTop: '5cqw' }}
+        className="h-full w-full object-cover"
       />
       <div style={{ padding: '6cqw' }}>
         <h2
@@ -1009,7 +1058,8 @@ export default function App() {
         )}
 
         {!conEscena && !sinMedia && !enContacto && !(rutaSub && (PANELES[rutaSub] || COMICS[rutaSub])) && (
-          <img
+          <ImagenConSpinner
+            caja="h-full w-full"
             src={portadaDe(lang)}
             alt={nombreActual}
             width={720}

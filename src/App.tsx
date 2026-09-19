@@ -45,7 +45,7 @@ const PANELES: Record<string, Panel[]> = {
 // capitulos es la ultima vineta de cada capitulo: con ella se sabe en que carpeta
 // esta guardada cada imagen, capitulo-01, capitulo-02, y asi hasta capitulo-08
 const COMICS: Record<string, { carpeta: string; vinetas: number; capitulos: number[] }> = {
-  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 120, capitulos: [12, 26, 44, 64, 84, 96, 108, 120] }
+  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 120, capitulos: [26, 64, 84, 120] }
 }
 
 // Secciones cuyas subrutas se listan en la columna izquierda. Las demas llegan
@@ -449,7 +449,7 @@ function LectorComic({ comic }: { comic: string }) {
               <button
                 type="button"
                 onClick={() => ir(1)}
-                className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-accent font-mono uppercase text-deep shadow-lg transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-crema"
+                className="absolute left-1/2 -translate-x-1/2 cursor-pointer whitespace-nowrap bg-deep font-mono uppercase text-crema shadow-lg transition-colors motion-safe:animate-pulse hover:animate-none hover:bg-accent hover:text-deep"
                 style={{ bottom: '3.5cqw', padding: '3cqw 4.5cqw', fontSize: '5.5cqw', letterSpacing: '0.12em', lineHeight: 1, borderRadius: '1cqw' }}
               >
                 {t('lector.leer')}

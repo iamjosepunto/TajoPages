@@ -269,6 +269,13 @@ function LectorComic({ comic }: { comic: string }) {
   const actual = paginas[pagina]
   const codigo = String(actual.vineta).padStart(3, '0')
   const texto = actual.tipo === 'vineta' ? t(`vinetas.${comic}.${codigo}`) : ''
+  // El texto de debajo no cambia hasta que la imagen de la pagina nueva ha
+  // cargado: si no, se lee lo que viene mientras todavia gira el spinner
+  const paginaDelTexto = cargadaEn >= 0 && cargadaEn < paginas.length ? paginas[cargadaEn] : actual
+  const textoVisible =
+    paginaDelTexto.tipo === 'vineta'
+      ? t(`vinetas.${comic}.${String(paginaDelTexto.vineta).padStart(3, '0')}`)
+      : ''
   // Cada capitulo guarda su caratula y sus vinetas en su propia carpeta
   const capituloCod = String(actual.capitulo).padStart(2, '0')
   const carpetaCapitulo = `${datos.carpeta}/capitulo-${capituloCod}`
@@ -608,7 +615,7 @@ function LectorComic({ comic }: { comic: string }) {
               />
               <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
                 <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
-                  {texto}
+                  {textoVisible}
                 </p>
               </div>
               {barra}

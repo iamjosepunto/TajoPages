@@ -77,6 +77,8 @@ function paginaDe(plantilla: string, idioma: Idioma, indice: number, sub: number
   html = ponerMeta(html, 'property', 'og:title', titulo)
   html = ponerMeta(html, 'property', 'og:description', descripcion)
   html = ponerMeta(html, 'property', 'og:url', url)
+  // Una imagen por idioma: el eslogan que lleva dentro va traducido
+  html = ponerMeta(html, 'property', 'og:image', `${DOMINIO}/og-${idioma}.png`)
   html = ponerMeta(html, 'property', 'og:locale', OG_LOCALES[idioma])
   html = ponerMeta(html, 'property', 'og:locale:alternate', OG_LOCALES[alterno])
   html = html.replace(/<link\s+rel="canonical"[\s\S]*?\/?>/i, `<link rel="canonical" href="${url}" />`)

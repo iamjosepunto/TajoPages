@@ -45,7 +45,7 @@ const PANELES: Record<string, Panel[]> = {
 // capitulos es la ultima vineta de cada capitulo: con ella se sabe en que carpeta
 // esta guardada cada imagen, capitulo-01, capitulo-02, y asi hasta capitulo-08
 const COMICS: Record<string, { carpeta: string; vinetas: number; capitulos: number[] }> = {
-  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 120, capitulos: [26, 64, 84, 120] }
+  'celestial-invader': { carpeta: '/comics/toletum/invasor-celeste', vinetas: 118, capitulos: [24, 62, 82, 118] }
 }
 
 // Secciones cuyas subrutas se listan en la columna izquierda. Las demas llegan

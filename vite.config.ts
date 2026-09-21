@@ -11,6 +11,10 @@ const DOMINIO = 'https://tajo.page'
 const IDIOMAS = ['en', 'es'] as const
 const OG_LOCALES = { en: 'en_US', es: 'es_ES' } as const
 
+// Secciones que abren su primera subruta nada mas cargar. Tiene que coincidir
+// con CON_SUBMENU de App.tsx, o el titulo de la pagina saltara al arrancar
+const CON_SUBMENU = ['comics']
+
 type Idioma = (typeof IDIOMAS)[number]
 type TablaIdiomas = Record<Idioma, string[]>
 
@@ -64,10 +68,14 @@ function paginaDe(plantilla: string, idioma: Idioma, indice: number, sub: number
   const tabla = subsDe(indice)
   const camino = caminoDe(idioma, indice, sub)
   const url = `${DOMINIO}${camino}`
+  // Una seccion con submenu abre su primera subruta al cargar: su pagina lleva
+  // ya ese titulo, el mismo que pondra App.tsx
+  const subTitulo = sub === null && tabla && CON_SUBMENU.includes(SLUGS.en[indice]) ? 0 : sub
   // La clave del diccionario es el slug ingles, asi el orden lo manda slugs.json
   const nombre =
-    sub === null || !tabla ? dic.secciones[`v${indice}`] : dic.subs[tabla.en[sub]]
-  const titulo = `${nombre} | ${dic.hero.title}`
+    subTitulo === null || !tabla ? dic.secciones[`v${indice}`] : dic.subs[tabla.en[subTitulo]]
+  // La portada lleva el titulo de la marca, igual que en App.tsx
+  const titulo = indice === 0 && sub === null ? dic.meta.title : `${nombre} | ${dic.hero.title}`
   const descripcion = dic.meta.description
 
   let html = plantilla

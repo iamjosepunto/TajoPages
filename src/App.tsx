@@ -1054,7 +1054,10 @@ export default function App() {
       window.history.replaceState(null, '', camino)
     }
 
-    const title = `${nombreActual} | ${t('hero.title')}`
+    // La portada lleva el titulo de la marca, el mismo que trae el HTML de
+    // partida: asi la pestana no cambia al arrancar
+    const title =
+      seccion === 0 && subActiva === null ? t('meta.title') : `${nombreActual} | ${t('hero.title')}`
     const description = t('meta.description')
     const url = `${DOMINIO}${camino}`
 

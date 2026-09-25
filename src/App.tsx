@@ -1,11 +1,17 @@
 ﻿// UBICACION: src/App.tsx
-import { useEffect, useRef, useState } from 'react'
-import type { ComponentProps, CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type {
+  ComponentProps,
+  CSSProperties,
+  MouseEvent as EventoRaton,
+  PointerEvent as EventoPuntero
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import type { SupportedLanguage } from './i18n'
 import i18next from './i18n'
 import { SLUGS, leerRuta, rutaDe, subsDe } from './rutas'
+import bocadillosJson from './bocadillos.json'
 
 // Todas las subrutas muestran la misma pantalla de obras hasta que tengan
 // contenido propio
@@ -202,6 +208,165 @@ function ImagenConSpinner({
   )
 }
 
+// Bocadillos y onomatopeyas dentro de las vinetas. Las imagenes siguen sin una
+// sola letra: la web los dibuja encima con el texto de los JSON de idioma, asi
+// valen para los dos idiomas. Las posiciones van en tanto por ciento de la imagen
+// y se marcan en local con el editor, que se abre con ?bocadillos en la direccion
+type Punto = [number, number]
+// piensa: bocadillo de pensamiento, con circulitos hacia la cabeza en vez de cola
+type Marca = { boca: Punto; globo: Punto; piensa?: boolean } | { sfx: Punto }
+type Circulo = { cx: number; cy: number; r: number }
+type TablaMarcas = Record<string, Record<string, Marca[]>>
+type Elemento = { tipo: 'sfx' | 'globo'; texto: string }
+// Hueco que ocupa cada elemento ya dibujado, en tanto por ciento de la vineta
+type Caja = { x: number; y: number; w: number; h: number }
+type Parte = 'globo' | 'boca' | 'sfx'
+const MARCAS = bocadillosJson as unknown as TablaMarcas
+// Alto de una vineta en las mismas unidades que su ancho, que vale 100
+const ALTO_VINETA = (976 / 576) * 100
+// Las onomatopeyas van al principio del texto, en mayusculas, y cada palabra
+// acaba en exclamacion o en puntos suspensivos: ¡BOOOOM!, ¡PUM... PUM... PUM!
+const ONOMATOPEYA = /^(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)\s*)+/
+const CLAVE_EDITOR = 'tajopages.bocadillos.editor'
+const CLAVE_MARCAS = 'tajopages.bocadillos.marcas'
+// Contorno negro de las onomatopeyas, hecho con sombras para que funcione igual
+// en todos los navegadores
+const CONTORNO = [
+  '-0.45cqw -0.45cqw 0 #111',
+  '0.45cqw -0.45cqw 0 #111',
+  '-0.45cqw 0.45cqw 0 #111',
+  '0.45cqw 0.45cqw 0 #111',
+  '0 -0.6cqw 0 #111',
+  '0 0.6cqw 0 #111',
+  '-0.6cqw 0 0 #111',
+  '0.6cqw 0 0 #111',
+  '0.9cqw 0.9cqw 0 rgba(0, 0, 0, 0.35)'
+].join(', ')
+
+// El editor solo existe en local y dura lo que la pestana: se abre con
+// ?bocadillos, y la marca se guarda porque la web reescribe la direccion al cargar
+const EDITOR_BOCADILLOS = (() => {
+  const { hostname, search } = window.location
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') return false
+  try {
+    if (new URLSearchParams(search).has('bocadillos')) sessionStorage.setItem(CLAVE_EDITOR, '1')
+    return sessionStorage.getItem(CLAVE_EDITOR) === '1'
+  } catch {
+    return false
+  }
+})()
+
+// Separa el texto de una vineta en lo que va dentro, que son las onomatopeyas del
+// principio y lo que dicen los personajes entre comillas, y la narracion, que es
+// lo que sobra y sigue yendo debajo
+function partesDe(texto: string, idioma: 'es' | 'en') {
+  const sonido = texto.match(ONOMATOPEYA)
+  const resto = sonido ? texto.slice(sonido[0].length) : texto
+  const comillas = idioma === 'es' ? /«([^»]*)»/g : /“([^”]*)”/g
+  const elementos: Elemento[] = sonido ? [{ tipo: 'sfx', texto: sonido[0].trim() }] : []
+  for (const dicho of resto.matchAll(comillas)) elementos.push({ tipo: 'globo', texto: dicho[1].trim() })
+  const narracion = resto.replace(comillas, ' ').replace(/\s+/g, ' ').trim()
+  return { elementos, narracion }
+}
+
+// Cada elemento necesita su marca, en el mismo orden y del mismo tipo: si el
+// texto cambia y ya no cuadran, la vineta vuelve a llevar todo su texto debajo
+function marcaCuadra(elemento: Elemento | undefined, marca: Marca) {
+  return !!elemento && (elemento.tipo === 'sfx') === 'sfx' in marca
+}
+
+function marcasCompletas(elementos: Elemento[], marcas: Marca[]) {
+  return (
+    elementos.length > 0 &&
+    marcas.length === elementos.length &&
+    marcas.every((marca, i) => marcaCuadra(elementos[i], marca))
+  )
+}
+
+// Bocadillo de pensamiento: en vez de cola, tres circulitos cada vez mas pequenos
+// que van del borde del bocadillo hacia la cabeza, repartidos por el camino
+function circulosDe(globo: { cx: number; cy: number; rx: number; ry: number }, cabeza: Punto): Circulo[] {
+  const mx = cabeza[0]
+  const my = (cabeza[1] * ALTO_VINETA) / 100
+  const dx = mx - globo.cx
+  const dy = my - globo.cy
+  const largo = Math.hypot(dx, dy)
+  if (!largo || !globo.rx || !globo.ry) return []
+  const borde = 1 / Math.hypot(dx / globo.rx, dy / globo.ry)
+  if (borde >= 1) return []
+  const ux = dx / largo
+  const uy = dy / largo
+  const ex = globo.cx + dx * borde
+  const ey = globo.cy + dy * borde
+  // Con un recorrido minimo, para que se vean los tres aunque el bocadillo este cerca
+  const camino = Math.max(largo * (1 - borde) - 1.2, 11)
+  const escala = Math.min(Math.max(camino / 12, 0.85), 1.25)
+  const [r1, r2, r3] = [2.8 * escala, 1.9 * escala, 1.2 * escala]
+  // Nunca se tocan entre si; si sobra camino, el del medio queda a mitad y el ultimo
+  // llega hasta la cabeza
+  const p1 = r1 + 0.9
+  const p2 = p1 + r1 + r2 + 1
+  const p3 = p2 + r2 + r3 + 1
+  const final = Math.max(camino - r3, p3)
+  const posiciones = [p1, p2 + (final - p3) / 2, final]
+  return posiciones.map((p, i) => ({ cx: ex + ux * p, cy: ey + uy * p, r: [r1, r2, r3][i] }))
+}
+
+// Cuanto hay que mover un elemento para que no se salga de la vineta, en tanto
+// por ciento, dejando un pequenio margen. Si no cabe, se centra
+function encajar(inicio: number, largo: number, margen: number) {
+  const r = (n: number) => Math.round(n * 100) / 100
+  if (largo >= 100 - 2 * margen) return r(50 - (inicio + largo / 2))
+  if (inicio < margen) return r(margen - inicio)
+  if (inicio + largo > 100 - margen) return r(100 - margen - (inicio + largo))
+  return 0
+}
+
+// Las onomatopeyas largas se encogen para no salirse de la vineta
+function tamanoOnomatopeya(texto: string) {
+  const mayor = Math.max(...texto.split(/\s+/).map((trozo) => trozo.length))
+  return Math.min(12, 84 / (mayor * 0.68))
+}
+
+// Cola del bocadillo: un triangulo que sale del borde de la elipse y apunta a la
+// boca, quedandose a un paso de ella. Tiene un largo minimo para que siempre se
+// vea aunque el bocadillo este pegado a la cara. Su base se mete un poco dentro
+// del bocadillo y, como el relleno se pinta encima del borde, la union no se nota
+function colaDe(globo: { cx: number; cy: number; rx: number; ry: number }, boca: Punto) {
+  const mx = boca[0]
+  const my = (boca[1] * ALTO_VINETA) / 100
+  const dx = mx - globo.cx
+  const dy = my - globo.cy
+  const largo = Math.hypot(dx, dy)
+  if (!largo || !globo.rx || !globo.ry) return ''
+  // Fraccion del camino hacia la boca en la que se cruza el borde de la elipse
+  const borde = 1 / Math.hypot(dx / globo.rx, dy / globo.ry)
+  // La boca queda dentro del bocadillo: no hay por donde sacar la cola
+  if (borde >= 1) return ''
+  const ux = dx / largo
+  const uy = dy / largo
+  const ex = globo.cx + dx * borde
+  const ey = globo.cy + dy * borde
+  const punta = Math.max(largo * (1 - borde) - 1.2, 4)
+  const ancho = Math.min(Math.max(punta * 0.45, 3), 7)
+  // Los dos puntos de la base van sobre la propia elipse, a ambos lados de por donde
+  // sale la cola y metidos 1,2 unidades hacia dentro. Asi cada lado de la cola cruza
+  // el borde una sola vez y la union queda limpia aunque la cola salga de lado; con
+  // la base recta, uno de sus extremos se quedaba fuera y hacia un pico
+  const angulo = Math.atan2((ey - globo.cy) / globo.ry, (ex - globo.cx) / globo.rx)
+  const paso = ancho / 2 / Math.hypot(globo.rx * Math.sin(angulo), globo.ry * Math.cos(angulo))
+  const base = (a: number) => {
+    const px = globo.rx * Math.cos(a)
+    const py = globo.ry * Math.sin(a)
+    const k = 1 - 1.2 / Math.hypot(px, py)
+    return [globo.cx + px * k, globo.cy + py * k]
+  }
+  const [b1x, b1y] = base(angulo - paso)
+  const [b2x, b2y] = base(angulo + paso)
+  const f = (n: number) => n.toFixed(2)
+  return `${f(b1x)},${f(b1y)} ${f(ex + ux * punta)},${f(ey + uy * punta)} ${f(b2x)},${f(b2y)}`
+}
+
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
 // leer, detras va el indice de capitulos, cada capitulo se abre con su caratula y
 // cada vineta va de borde a borde sobre su texto. No es ciclico: desde la portada
@@ -216,6 +381,44 @@ function LectorComic({ comic }: { comic: string }) {
   // Que pagina ha terminado de cargar su imagen. Al cambiar de pagina el valor
   // deja de coincidir y vuelve a salir el spinner, sin efectos de por medio
   const [cargadaEn, setCargadaEn] = useState(-1)
+  // Marcas de bocadillos: las del archivo, y en el editor, encima, las que se
+  // van marcando, que se guardan en el navegador para no perderlas al recargar
+  const [marcas, setMarcas] = useState<TablaMarcas>(() => {
+    if (!EDITOR_BOCADILLOS) return MARCAS
+    try {
+      const guardadas = JSON.parse(localStorage.getItem(CLAVE_MARCAS) ?? '{}') as TablaMarcas
+      const juntas: TablaMarcas = { ...MARCAS }
+      for (const [c, tabla] of Object.entries(guardadas)) juntas[c] = { ...MARCAS[c], ...tabla }
+      return juntas
+    } catch {
+      return MARCAS
+    }
+  })
+  // En el editor, la boca marcada que espera el clic del bocadillo
+  const [pendiente, setPendiente] = useState<{ codigo: string; punto: Punto } | null>(null)
+  const [copiado, setCopiado] = useState(false)
+  // Colas de los bocadillos, que dependen del tamanio real con que se pinta cada
+  // uno: se miden despues de dibujarlos
+  const capa = useRef<HTMLDivElement>(null)
+  const nodos = useRef<(HTMLElement | null)[]>([])
+  // Cada bocadillo u onomatopeya que se saldria de la vineta se mete hacia dentro:
+  // el ajuste depende de su tamanio real, que cambia con el idioma
+  const [dibujo, setDibujo] = useState<{
+    colas: string[]
+    circulos: Circulo[][]
+    cajas: (Caja | null)[]
+    ajustes: Punto[]
+  }>({
+    colas: [],
+    circulos: [],
+    cajas: [],
+    ajustes: []
+  })
+  const { colas, circulos, cajas, ajustes } = dibujo
+  // En el editor, lo que se esta arrastrando: un bocadillo, su boca o una onomatopeya
+  const editor = useRef<HTMLDivElement>(null)
+  const [arrastre, setArrastre] = useState<{ indice: number; parte: Parte; dx: number; dy: number } | null>(null)
+  const [anchoCapa, setAnchoCapa] = useState(0)
   // Aviso de que se puede pasar pagina con el teclado: se queda en todas las
   // paginas hasta que se pulsa el boton
   const [aviso, setAviso] = useState(false)
@@ -276,6 +479,21 @@ function LectorComic({ comic }: { comic: string }) {
     paginaDelTexto.tipo === 'vineta'
       ? t(`vinetas.${comic}.${String(paginaDelTexto.vineta).padStart(3, '0')}`)
       : ''
+  // Lo que va dentro de la vineta que se esta viendo. Mientras sus marcas no esten
+  // completas, todo su texto sigue debajo como siempre
+  const partes =
+    paginaDelTexto.tipo === 'vineta' ? partesDe(textoVisible, idioma) : { elementos: [], narracion: '' }
+  const codigoVisible = String(paginaDelTexto.vineta).padStart(3, '0')
+  const marcasVisibles = marcas[comic]?.[codigoVisible] ?? []
+  const completas = marcasCompletas(partes.elementos, marcasVisibles)
+  const textoDebajo = completas ? partes.narracion : textoVisible
+  // Fuera del editor solo se dibujan las vinetas completas; en el editor, tambien
+  // lo que se lleva marcado
+  const marcasDibujadas =
+    completas || EDITOR_BOCADILLOS
+      ? marcasVisibles.slice(0, partes.elementos.length).map((m, i) => (marcaCuadra(partes.elementos[i], m) ? m : null))
+      : []
+  const hayCapa = actual.tipo === 'vineta' && paginaDelTexto.tipo === 'vineta'
   // Cada capitulo guarda su caratula y sus vinetas en su propia carpeta
   const capituloCod = String(actual.capitulo).padStart(2, '0')
   const carpetaCapitulo = `${datos.carpeta}/capitulo-${capituloCod}`
@@ -450,6 +668,207 @@ function LectorComic({ comic }: { comic: string }) {
     </svg>
   )
 
+  // Si la vineta cambia de tamanio (ventana, pantalla completa) se vuelven a medir
+  // los bocadillos
+  useEffect(() => {
+    const el = capa.current
+    if (!hayCapa || !el) return
+    const observador = new ResizeObserver(() => setAnchoCapa(el.getBoundingClientRect().width))
+    observador.observe(el)
+    return () => observador.disconnect()
+  }, [hayCapa])
+
+  const claveDibujo = JSON.stringify([codigoVisible, idioma, marcasDibujadas])
+  useLayoutEffect(() => {
+    const r = capa.current?.getBoundingClientRect()
+    const nuevo: { colas: string[]; circulos: Circulo[][]; cajas: (Caja | null)[]; ajustes: Punto[] } = {
+      colas: [],
+      circulos: [],
+      cajas: [],
+      ajustes: []
+    }
+    if (r && r.width && r.height) {
+      marcasDibujadas.forEach((m, i) => {
+        const b = nodos.current[i]?.getBoundingClientRect()
+        if (!m || !b) {
+          nuevo.colas.push('')
+          nuevo.circulos.push([])
+          nuevo.cajas.push(null)
+          nuevo.ajustes.push([0, 0])
+          return
+        }
+        const caja: Caja = {
+          x: ((b.left - r.left) / r.width) * 100,
+          y: ((b.top - r.top) / r.height) * 100,
+          w: (b.width / r.width) * 100,
+          h: (b.height / r.height) * 100
+        }
+        nuevo.cajas.push(caja)
+        // Se calcula desde donde caeria sin ajuste, asi el resultado no cambia de
+        // una pasada a otra
+        const previo = ajustes[i] ?? [0, 0]
+        nuevo.ajustes.push([encajar(caja.x - previo[0], caja.w, 1.5), encajar(caja.y - previo[1], caja.h, 1)])
+        // Para la cola y los circulitos, el alto va en las mismas unidades que el ancho
+        const escala = 100 / r.width
+        const elipse = {
+          cx: (b.left + b.width / 2 - r.left) * escala,
+          cy: (b.top + b.height / 2 - r.top) * escala,
+          rx: (b.width / 2) * escala,
+          ry: (b.height / 2) * escala
+        }
+        nuevo.colas.push('boca' in m && !m.piensa ? colaDe(elipse, m.boca) : '')
+        nuevo.circulos.push('boca' in m && m.piensa ? circulosDe(elipse, m.boca) : [])
+      })
+    }
+    setDibujo((viejo) => {
+      // Diferencias de medicion minimas no cuentan: asi no se entra en un bucle
+      const iguales = nuevo.ajustes.every(
+        (a, i) =>
+          Math.abs(a[0] - (viejo.ajustes[i]?.[0] ?? 0)) < 0.05 && Math.abs(a[1] - (viejo.ajustes[i]?.[1] ?? 0)) < 0.05
+      )
+      if (iguales && nuevo.ajustes.length === viejo.ajustes.length) nuevo.ajustes = viejo.ajustes
+      return JSON.stringify(viejo) === JSON.stringify(nuevo) ? viejo : nuevo
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveDibujo, anchoCapa, JSON.stringify(ajustes)])
+
+  // ---- Editor de bocadillos (solo en local) ----
+  const guardarMarcas = (lista: Marca[]) => {
+    const nuevas: TablaMarcas = { ...marcas, [comic]: { ...marcas[comic], [codigoVisible]: lista } }
+    setMarcas(nuevas)
+    try {
+      localStorage.setItem(CLAVE_MARCAS, JSON.stringify(nuevas))
+    } catch {
+      // sin sitio en el navegador: las marcas duran hasta recargar
+    }
+  }
+  const redondear = (n: number) => Math.round(Math.min(Math.max(n, 0), 100) * 10) / 10
+  const lista = cargadaEn === pagina && paginaDelTexto.tipo === 'vineta'
+  // Punto del raton en tanto por ciento de la vineta
+  const puntoDe = (e: { clientX: number; clientY: number }): Punto | null => {
+    const r = editor.current?.getBoundingClientRect()
+    if (!r || !r.width || !r.height) return null
+    return [((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100]
+  }
+  const clicEditor = (e: EventoRaton<HTMLDivElement>) => {
+    if (!lista) return
+    const crudo = puntoDe(e)
+    if (!crudo) return
+    const punto: Punto = [redondear(crudo[0]), redondear(crudo[1])]
+    const hechas = marcasVisibles.slice(0, partes.elementos.length)
+    const siguiente = partes.elementos[hechas.length]
+    if (!siguiente) return
+    if (siguiente.tipo === 'sfx') {
+      guardarMarcas([...hechas, { sfx: punto }])
+    } else if (!pendiente || pendiente.codigo !== codigoVisible) {
+      setPendiente({ codigo: codigoVisible, punto })
+    } else {
+      guardarMarcas([...hechas, { boca: pendiente.punto, globo: punto }])
+      setPendiente(null)
+    }
+  }
+  // Todo lo marcado se puede arrastrar: el bocadillo, su boca y las onomatopeyas.
+  // Se guarda la distancia entre el raton y el punto para que no pegue un salto
+  const empezarArrastre = (e: EventoPuntero<HTMLElement>, indice: number, parte: Parte, punto: Punto) => {
+    e.stopPropagation()
+    const p = puntoDe(e)
+    if (!lista || !p) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setArrastre({ indice, parte, dx: p[0] - punto[0], dy: p[1] - punto[1] })
+  }
+  const moverArrastre = (e: EventoPuntero<HTMLDivElement>) => {
+    const p = puntoDe(e)
+    if (!arrastre || !p) return
+    const punto: Punto = [redondear(p[0] - arrastre.dx), redondear(p[1] - arrastre.dy)]
+    const nuevas = marcasVisibles.slice()
+    const m = nuevas[arrastre.indice]
+    if (!m) return
+    if ('sfx' in m) nuevas[arrastre.indice] = { sfx: punto }
+    else if (arrastre.parte === 'boca') nuevas[arrastre.indice] = { ...m, boca: punto }
+    else nuevas[arrastre.indice] = { ...m, globo: punto }
+    guardarMarcas(nuevas)
+  }
+  const soltarArrastre = () => setArrastre(null)
+  // Doble clic en un bocadillo: pasa de hablar a pensar y al reves
+  const alternarPensamiento = (indice: number) => {
+    const nuevas = marcasVisibles.slice()
+    const m = nuevas[indice]
+    if (!m || !('boca' in m)) return
+    const { piensa, ...resto } = m
+    nuevas[indice] = piensa ? resto : { ...resto, piensa: true }
+    guardarMarcas(nuevas)
+  }
+  const rehacer = () => {
+    if (!lista) return
+    guardarMarcas([])
+    setPendiente(null)
+  }
+  // Salta a la siguiente vineta que tenga algo sin marcar
+  const pendienteDe = (n: number) => {
+    const p = paginas[n]
+    if (p.tipo !== 'vineta') return false
+    const cod = String(p.vineta).padStart(3, '0')
+    const { elementos } = partesDe(t(`vinetas.${comic}.${cod}`), idioma)
+    return elementos.length > 0 && !marcasCompletas(elementos, marcas[comic]?.[cod] ?? [])
+  }
+  const siguientePendiente = () => {
+    for (let paso = 1; paso <= ultima; paso++) {
+      const n = (pagina + paso) % (ultima + 1)
+      if (pendienteDe(n)) {
+        setPendiente(null)
+        setPagina(n)
+        return
+      }
+    }
+  }
+  const copiarMarcas = () => {
+    const ordenadas: TablaMarcas = {}
+    for (const c of Object.keys(marcas).sort()) {
+      ordenadas[c] = {}
+      for (const cod of Object.keys(marcas[c]).sort()) {
+        if (marcas[c][cod].length) ordenadas[c][cod] = marcas[c][cod]
+      }
+    }
+    void navigator.clipboard?.writeText(JSON.stringify(ordenadas, null, 2)).then(() => {
+      setCopiado(true)
+      window.setTimeout(() => setCopiado(false), 1500)
+    })
+  }
+  let rotuloEditor = ''
+  if (EDITOR_BOCADILLOS && actual.tipo === 'vineta') {
+    let total = 0
+    let hechas = 0
+    for (let v = 1; v <= datos.vinetas; v++) {
+      const cod = String(v).padStart(3, '0')
+      const { elementos } = partesDe(t(`vinetas.${comic}.${cod}`), idioma)
+      if (!elementos.length) continue
+      total++
+      if (marcasCompletas(elementos, marcas[comic]?.[cod] ?? [])) hechas++
+    }
+    const cuenta = `${hechas}/${total}`
+    const siguiente = partes.elementos[marcasVisibles.length]
+    const cuadran = marcasVisibles.every((m, i) => marcaCuadra(partes.elementos[i], m))
+    // Un bocadillo que tapa la boca se queda sin cola: hay que colocarlo mas lejos
+    const tapaBoca = marcasDibujadas.some(
+      (m, i) => !!m && 'boca' in m && colas[i] === '' && !(circulos[i]?.length ?? 0)
+    )
+    rotuloEditor = !lista
+      ? 'Cargando...'
+      : !partes.elementos.length
+        ? `Sin bocadillos · ${cuenta}`
+        : !cuadran
+          ? `Las marcas no cuadran con el texto: pulsa Rehacer · ${cuenta}`
+          : completas
+            ? tapaBoca
+              ? `Un bocadillo tapa la boca y se queda sin cola: Rehacer · ${cuenta}`
+              : `Lista: arrastra para mover, doble clic en un bocadillo para que piense · ${cuenta}`
+            : siguiente?.tipo === 'sfx'
+              ? `Clic donde va «${siguiente.texto}» · ${cuenta}`
+              : pendiente?.codigo === codigoVisible
+                ? `Ahora clic en el CENTRO del bocadillo · ${cuenta}`
+                : `Clic en la BOCA de quien dice «${siguiente?.texto ?? ''}» · ${cuenta}`
+  }
+
   // Spinner mientras la imagen de la pagina no ha cargado
   const marcarCargada = () => setCargadaEn(pagina)
   const spinner = cargadaEn !== pagina && <Spinner />
@@ -615,7 +1034,7 @@ function LectorComic({ comic }: { comic: string }) {
               />
               <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
                 <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
-                  {textoVisible}
+                  {textoDebajo}
                 </p>
               </div>
               {barra}
@@ -623,6 +1042,230 @@ function LectorComic({ comic }: { comic: string }) {
           )}
 
           {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
+          {/* Bocadillos y onomatopeyas, encima de la vineta y por debajo de las
+              flechas. La cola va en dos capas: el trazo por debajo del bocadillo y
+              el relleno por encima, que tapa el borde donde se unen */}
+          {hayCapa && (
+            <div
+              ref={capa}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 z-[5]"
+              style={{ height: `${ALTO_VINETA}cqw` }}
+            >
+              <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 100 ${ALTO_VINETA}`}>
+                {colas.map(
+                  (c, i) =>
+                    c && (
+                      <polygon key={i} points={c} fill="#fff" stroke="#111" strokeWidth={1.1} strokeLinejoin="round" />
+                    )
+                )}
+              </svg>
+              {partes.elementos.map((el, i) => {
+                const m = marcasDibujadas[i]
+                if (!m) return null
+                if ('sfx' in m) {
+                  return (
+                    <div
+                      key={i}
+                      className="absolute"
+                      style={{ left: `${m.sfx[0] + (ajustes[i]?.[0] ?? 0)}%`, top: `${m.sfx[1] + (ajustes[i]?.[1] ?? 0)}%` }}
+                    >
+                      <span
+                        ref={(nodo) => {
+                          nodos.current[i] = nodo
+                        }}
+                        className="block text-center font-extrabold uppercase"
+                        style={{
+                          width: 'max-content',
+                          maxWidth: '84cqw',
+                          transform: 'translate(-50%, -50%) rotate(-7deg)',
+                          fontSize: `${tamanoOnomatopeya(el.texto)}cqw`,
+                          lineHeight: 1,
+                          letterSpacing: '0.02em',
+                          color: '#ffc93c',
+                          textShadow: CONTORNO
+                        }}
+                      >
+                        {el.texto}
+                      </span>
+                    </div>
+                  )
+                }
+                return (
+                  <div
+                    key={i}
+                    className="absolute"
+                    style={{ left: `${m.globo[0] + (ajustes[i]?.[0] ?? 0)}%`, top: `${m.globo[1] + (ajustes[i]?.[1] ?? 0)}%` }}
+                  >
+                    {/* El texto manda: la elipse se dibuja detras, un 44 % mas grande que
+                        el bloque de texto en cada sentido. Es la elipse justa que pasa por
+                        sus cuatro esquinas, asi ninguna linea toca el borde */}
+                    <div
+                      className="relative text-center font-semibold uppercase"
+                      style={{
+                        width: 'max-content',
+                        maxWidth: '40cqw',
+                        transform: 'translate(-50%, -50%)',
+                        padding: '1.6cqw',
+                        fontSize: '4.2cqw',
+                        lineHeight: 1.2,
+                        letterSpacing: '0.02em',
+                        color: '#111',
+                        textWrap: 'balance'
+                      }}
+                    >
+                      <div
+                        ref={(nodo) => {
+                          nodos.current[i] = nodo
+                        }}
+                        className="absolute"
+                        style={{
+                          left: '-22%',
+                          right: '-22%',
+                          top: '-22%',
+                          bottom: '-22%',
+                          background: '#fff',
+                          border: '0.55cqw solid #111',
+                          borderRadius: '50%'
+                        }}
+                      />
+                      <span className="relative">{el.texto}</span>
+                    </div>
+                  </div>
+                )
+              })}
+              <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 100 ${ALTO_VINETA}`}>
+                {colas.map((c, i) => c && <polygon key={i} points={c} fill="#fff" />)}
+                {circulos.map((lista, i) =>
+                  lista.map((c, j) => (
+                    <circle key={`${i}-${j}`} cx={c.cx} cy={c.cy} r={c.r} fill="#fff" stroke="#111" strokeWidth={0.55} />
+                  ))
+                )}
+              </svg>
+            </div>
+          )}
+
+          {/* Editor de bocadillos: solo en local y con ?bocadillos. Tapa las flechas
+              para que los clics no pasen pagina; se pasa con las flechas del teclado */}
+          {EDITOR_BOCADILLOS && actual.tipo === 'vineta' && (
+            <div
+              ref={editor}
+              className="absolute inset-x-0 top-0 z-20 cursor-crosshair"
+              style={{ height: `${ALTO_VINETA}cqw`, touchAction: 'none' }}
+              onClick={clicEditor}
+              onPointerMove={moverArrastre}
+              onPointerUp={soltarArrastre}
+              onPointerCancel={soltarArrastre}
+            >
+              {/* Asas para arrastrar lo ya marcado. El bocadillo y la onomatopeya se
+                  cogen por todo su hueco; la boca, por su punto rojo */}
+              {marcasDibujadas.map((m, i) => {
+                const caja = cajas[i]
+                if (!m || !caja) return null
+                const parar = (e: EventoRaton) => e.stopPropagation()
+                const centro: Punto = 'sfx' in m ? m.sfx : m.globo
+                return (
+                  <div key={i}>
+                    <div
+                      className="absolute cursor-move outline-2 outline-transparent outline-dashed hover:outline-[#ffc93c]"
+                      style={{
+                        left: `${caja.x}%`,
+                        top: `${caja.y}%`,
+                        width: `${caja.w}%`,
+                        height: `${caja.h}%`,
+                        borderRadius: 'sfx' in m ? '0.5rem' : '50%',
+                        touchAction: 'none'
+                      }}
+                      onPointerDown={(e) => empezarArrastre(e, i, 'sfx' in m ? 'sfx' : 'globo', centro)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation()
+                        alternarPensamiento(i)
+                      }}
+                      onClick={parar}
+                    />
+                    {'boca' in m && (
+                      <span
+                        className="absolute cursor-grab rounded-full border-2 border-white"
+                        style={{
+                          left: `${m.boca[0]}%`,
+                          top: `${m.boca[1]}%`,
+                          width: 14,
+                          height: 14,
+                          transform: 'translate(-50%, -50%)',
+                          background: '#dc2626',
+                          touchAction: 'none'
+                        }}
+                        onPointerDown={(e) => empezarArrastre(e, i, 'boca', m.boca)}
+                        onClick={parar}
+                      />
+                    )}
+                  </div>
+                )
+              })}
+              {/* Las flechas de pantalla siguen funcionando: estas dos zonas invisibles
+                  van justo encima de sus circulos, y el resto de la vineta queda para marcar */}
+              {[false, true].map((adelante) =>
+                (adelante ? pagina === ultima : pagina <= PRIMERA_DEL_COMIC) ? null : (
+                  <button
+                    key={String(adelante)}
+                    type="button"
+                    aria-label={t(adelante ? 'paneles.siguiente' : 'paneles.anterior')}
+                    className="absolute cursor-pointer rounded-full"
+                    style={{
+                      bottom: '3cqw',
+                      left: adelante ? undefined : '2.5cqw',
+                      right: adelante ? '2.5cqw' : undefined,
+                      width: '13.75cqw',
+                      height: '13.75cqw'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPendiente(null)
+                      ir(adelante ? 1 : -1)
+                    }}
+                  />
+                )
+              )}
+              <div
+                className="absolute inset-x-0 top-0 flex flex-wrap items-center gap-1.5 bg-black/80 px-2 py-1 font-mono text-[11px] leading-tight text-white"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="min-w-0 grow">{rotuloEditor}</span>
+                <button type="button" onClick={rehacer} className="cursor-pointer rounded bg-white/20 px-2 py-0.5">
+                  Rehacer
+                </button>
+                <button
+                  type="button"
+                  onClick={siguientePendiente}
+                  className="cursor-pointer rounded bg-white/20 px-2 py-0.5"
+                >
+                  Siguiente pendiente
+                </button>
+                <button
+                  type="button"
+                  onClick={copiarMarcas}
+                  className="cursor-pointer rounded px-2 py-0.5 text-black"
+                  style={{ background: '#ffc93c' }}
+                >
+                  {copiado ? 'Copiado' : 'Copiar JSON'}
+                </button>
+              </div>
+              {pendiente?.codigo === codigoVisible && (
+                <span
+                  className="absolute rounded-full border-2 border-white"
+                  style={{
+                    left: `${pendiente.punto[0]}%`,
+                    top: `${pendiente.punto[1]}%`,
+                    width: 12,
+                    height: 12,
+                    transform: 'translate(-50%, -50%)',
+                    background: '#dc2626'
+                  }}
+                />
+              )}
+            </div>
+          )}
+
 
           {aviso && conTeclado && leyendo && (
             <div className="absolute inset-x-0 z-30 flex justify-center" style={{ bottom: '17cqw' }}>

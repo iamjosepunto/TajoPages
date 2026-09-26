@@ -213,8 +213,16 @@ function ImagenConSpinner({
 // valen para los dos idiomas. Las posiciones van en tanto por ciento de la imagen
 // y se marcan en local con el editor, que se abre con ?bocadillos en la direccion
 type Punto = [number, number]
-// piensa: bocadillo de pensamiento, con circulitos hacia la cabeza en vez de cola
-type Marca = { boca: Punto; globo: Punto; piensa?: boolean } | { sfx: Punto }
+// Marco de cada onomatopeya, segun como suena
+type Forma = 'estallido' | 'grieta' | 'salpicadura' | 'ondas' | 'nube' | 'ninguna'
+// forma, letras y fondo: el marco de la onomatopeya y sus colores. Sin colores
+// lleva los de partida de su forma. transparencia: cuanto deja ver la vineta a
+// traves del fondo, de 0 a 100
+type MarcaSonido = { sfx: Punto; forma?: Forma; letras?: string; fondo?: string; transparencia?: number }
+// piensa: bocadillo de pensamiento, con circulitos hacia la cabeza en vez de cola.
+// transparencia: como en las onomatopeyas, la de su fondo blanco
+type MarcaGlobo = { boca: Punto; globo: Punto; piensa?: boolean; transparencia?: number }
+type Marca = MarcaGlobo | MarcaSonido
 type Circulo = { cx: number; cy: number; r: number }
 type TablaMarcas = Record<string, Record<string, Marca[]>>
 type Elemento = { tipo: 'sfx' | 'globo'; texto: string }
@@ -229,19 +237,202 @@ const ALTO_VINETA = (976 / 576) * 100
 const ONOMATOPEYA = /^(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)\s*)+/
 const CLAVE_EDITOR = 'tajopages.bocadillos.editor'
 const CLAVE_MARCAS = 'tajopages.bocadillos.marcas'
-// Contorno negro de las onomatopeyas, hecho con sombras para que funcione igual
-// en todos los navegadores
-const CONTORNO = [
-  '-0.45cqw -0.45cqw 0 #111',
-  '0.45cqw -0.45cqw 0 #111',
-  '-0.45cqw 0.45cqw 0 #111',
-  '0.45cqw 0.45cqw 0 #111',
-  '0 -0.6cqw 0 #111',
-  '0 0.6cqw 0 #111',
-  '-0.6cqw 0 0 #111',
-  '0.6cqw 0 0 #111',
-  '0.9cqw 0.9cqw 0 rgba(0, 0, 0, 0.35)'
-].join(', ')
+
+// Recortes de los marcos. El estallido y la grieta son puntas dibujadas a mano; la
+// nube y la salpicadura salen del radio que tienen en cada angulo, en fraccion de
+// su caja. t es el angulo desde arriba, en el sentido de las agujas del reloj
+const ESTALLIDO =
+  'polygon(49.8% 1.8%, 58.6% 13.1%, 68.5% 5.3%, 70.3% 17.8%, 85.1% 15.6%, 80.3% 28.3%, 94.8% 29.7%, 85.6% 43.5%, 99.8% 51.9%, 87.6% 58.0%, 93.0% 66.5%, 80.1% 70.2%, 84.0% 82.4%, 72.2% 80.7%, 69.1% 95.5%, 57.5% 87.8%, 50.0% 98.6%, 42.9% 86.4%, 29.0% 95.4%, 27.6% 81.7%, 17.3% 83.7%, 20.2% 70.7%, 5.6% 67.3%, 13.0% 56.3%, 0.6% 48.2%, 13.6% 44.3%, 6.4% 30.2%, 19.6% 27.9%, 14.5% 16.9%, 30.1% 18.7%, 30.5% 6.9%, 43.8% 11.5%)'
+const GRIETA =
+  'polygon(47.1% 2.3%, 60.2% 18.2%, 74.1% 7.9%, 76.6% 29.4%, 90.6% 31.5%, 81.7% 42.5%, 92.9% 56.8%, 78.0% 64.6%, 84.0% 76.7%, 66.3% 81.2%, 60.2% 96.2%, 52.7% 82.2%, 37.7% 92.0%, 30.2% 75.9%, 15.2% 84.1%, 17.9% 67.4%, 3.7% 57.1%, 16.8% 46.2%, 9.7% 34.3%, 27.5% 27.7%, 27.9% 11.4%, 42.8% 14.5%)'
+function poligono(puntos: number, radio: (t: number) => number) {
+  const lista: string[] = []
+  for (let i = 0; i < puntos; i++) {
+    const t = (i / puntos) * Math.PI * 2
+    const r = radio(t)
+    lista.push(`${(50 + 100 * r * Math.sin(t)).toFixed(1)}% ${(50 - 100 * r * Math.cos(t)).toFixed(1)}%`)
+  }
+  return `polygon(${lista.join(', ')})`
+}
+// Doce bultos redondos
+const NUBE = poligono(180, (t) => 0.4 + 0.1 * Math.abs(Math.sin(6 * t)))
+// Un borde que ondula y siete chorros: angulo por donde sale cada uno, lo que se
+// alarga y lo ancho que es, en radianes
+const CHORROS: [number, number, number][] = [
+  [0, 0.125, 0.279],
+  [0.95, 0.132, 0.295],
+  [1.9, 0.13, 0.294],
+  [2.75, 0.101, 0.257],
+  [3.6, 0.138, 0.272],
+  [4.5, 0.136, 0.229],
+  [5.35, 0.119, 0.24]
+]
+const SALPICADURA = poligono(240, (t) => {
+  let r = 0.36 - 0.015 * Math.cos(5 * t)
+  for (const [centro, largo, ancho] of CHORROS) {
+    const d = Math.atan2(Math.sin(t - centro), Math.cos(t - centro))
+    if (Math.abs(d) < ancho) r = Math.max(r, 0.36 + largo * Math.cos((d / ancho) * (Math.PI / 2)) ** 0.6)
+  }
+  return Math.min(r, 0.5)
+})
+
+// Cada forma con sus colores de partida y su giro; fondo null es que no lleva
+// relleno. alto y ancho: cuanto sobresale el marco del texto por arriba y abajo y
+// por los lados, en tanto por ciento de su alto y de su ancho, mas letras (em) en
+// la salpicadura, la nube y las ondas para que no queden planas con una sola
+// linea. limite: ancho maximo del texto para que todo el marco quepa en la vineta;
+// tope: tamanio maximo de la letra. Las medidas van en cqw
+const FORMAS: Record<
+  Forma,
+  {
+    nombre: string
+    letras: string
+    fondo: string | null
+    giro: number
+    recorte: string | null
+    alto: string
+    ancho: string
+    limite: number
+    tope: number
+  }
+> = {
+  estallido: {
+    nombre: 'Estallido',
+    letras: '#ffc93c',
+    fondo: '#ffffff',
+    giro: -8,
+    recorte: ESTALLIDO,
+    alto: '-55%',
+    ancho: '-32%',
+    limite: 56,
+    tope: 12
+  },
+  grieta: {
+    nombre: 'Grieta',
+    letras: '#dfe7ef',
+    fondo: '#2b3a55',
+    giro: -6,
+    recorte: GRIETA,
+    alto: '-62%',
+    ancho: '-40%',
+    limite: 51,
+    tope: 12
+  },
+  salpicadura: {
+    nombre: 'Salpicadura',
+    letras: '#ffffff',
+    fondo: '#7fd6ff',
+    giro: -5,
+    recorte: SALPICADURA,
+    alto: '-40% - 1.5em',
+    ancho: '-48%',
+    limite: 47,
+    tope: 11
+  },
+  // En las ondas, alto y ancho son los del anillo de fuera, y su limite es para todo
+  ondas: {
+    nombre: 'Ondas',
+    letras: '#ff4d4d',
+    fondo: null,
+    giro: -4,
+    recorte: null,
+    alto: '-25% - 1.45em',
+    ancho: '-10% - 1.4em',
+    limite: 92,
+    tope: 11
+  },
+  nube: {
+    nombre: 'Nube',
+    letras: '#7fd6ff',
+    fondo: '#ffffff',
+    giro: -4,
+    recorte: NUBE,
+    alto: '-42% - 0.6em',
+    ancho: '-40%',
+    limite: 51,
+    tope: 12
+  },
+  ninguna: {
+    nombre: 'Sin marco',
+    letras: '#ffc93c',
+    fondo: null,
+    giro: -7,
+    recorte: null,
+    alto: '0%',
+    ancho: '0%',
+    limite: 84,
+    tope: 13
+  }
+}
+const LISTA_FORMAS = Object.keys(FORMAS) as Forma[]
+// Cada recorte tambien como imagen, para las mascaras que vacian el contorno y la
+// sombra cuando el fondo deja ver la vineta: si no, se verian a traves de el
+const MASCARAS: Partial<Record<Forma, string>> = {}
+for (const forma of LISTA_FORMAS) {
+  const recorte = FORMAS[forma].recorte
+  if (!recorte) continue
+  const puntos = recorte.slice('polygon('.length, -1).replace(/%/g, '')
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">' +
+    `<polygon points="${puntos}"/></svg>`
+  MASCARAS[forma] = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+}
+// Brillo del relleno: reflejo de metal en la grieta y de luz en el agua
+const BRILLOS: Partial<Record<Forma, string>> = {
+  grieta: 'linear-gradient(160deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 48%)',
+  salpicadura: 'radial-gradient(circle at 38% 32%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 45%)'
+}
+// Gotas sueltas de la salpicadura: posicion en tanto por ciento de su marco, lado
+// y grosor del borde
+const GOTAS: [number, number, number, number][] = [
+  [59.8, -3.6, 6.1, 0.9],
+  [99.9, 26.5, 5.4, 0.9],
+  [98, 76.8, 6.8, 0.9],
+  [60.9, 101, 4.6, 0.7],
+  [16.8, 94.8, 5.7, 0.9]
+]
+// Anillos de las ondas, de fuera a dentro: cuanto se separan del de dentro (em), su
+// grosor y su opacidad. El de dentro va un 25 % mas alto y un 10 % mas ancho que el
+// texto, mas casi media letra, para que ninguna esquina lo toque. Lleva borde negro
+const ANILLOS: [number, number, number][] = [
+  [1, 0.7, 0.35],
+  [0.5, 0.9, 0.6],
+  [0, 1.1, 1]
+]
+// Colores para elegir en el editor; con el selector vale cualquier otro
+const PALETA: [string, string][] = [
+  ['Fuego', '#ffc93c'],
+  ['Brasa', '#ff8a1f'],
+  ['Latido', '#ff4d4d'],
+  ['Agua', '#7fd6ff'],
+  ['Ácido', '#9be15d'],
+  ['Dragón', '#c49be8'],
+  ['Acero', '#dfe7ef'],
+  ['Hueso', '#fff4dc'],
+  ['Blanco', '#ffffff'],
+  ['Acero oscuro', '#2b3a55']
+]
+// Letras de las onomatopeyas: contorno negro y tres pasos de canto hacia abajo a la
+// derecha, que las levantan del marco. En el agua el canto es azul oscuro
+function sombraLetras(canto: string) {
+  const c = 0.54
+  const contorno: Punto[] = [
+    [-c, -c],
+    [c, -c],
+    [-c, c],
+    [c, c],
+    [0, -c],
+    [0, c],
+    [-c, 0],
+    [c, 0]
+  ]
+  return [
+    ...contorno.map(([x, y]) => `${x}cqw ${y}cqw 0 #111`),
+    ...[0.7, 1.05, 1.4].map((d) => `${d}cqw ${d}cqw 0 ${canto}`)
+  ].join(', ')
+}
+const SOMBRA_LETRAS = sombraLetras('#111')
+const SOMBRA_LETRAS_AGUA = sombraLetras('#0b3b66')
 
 // El editor solo existe en local y dura lo que la pestana: se abre con
 // ?bocadillos, y la marca se guarda porque la web reescribe la direccion al cargar
@@ -322,27 +513,68 @@ function encajar(inicio: number, largo: number, margen: number) {
   return 0
 }
 
-// Las onomatopeyas largas se encogen para no salirse de la vineta
-function tamanoOnomatopeya(texto: string) {
-  const mayor = Math.max(...texto.split(/\s+/).map((trozo) => trozo.length))
-  return Math.min(12, 84 / (mayor * 0.68))
+// Una forma que no existe, por un error en el JSON, se queda en estallido
+function formaDe(marca: MarcaSonido): Forma {
+  return marca.forma && LISTA_FORMAS.includes(marca.forma) ? marca.forma : 'estallido'
+}
+
+// Transparencia del fondo entre 0 y 100; las onomatopeyas sin fondo no tienen
+function transparenciaDe(marca: Marca) {
+  if ('sfx' in marca && !FORMAS[formaDe(marca)].fondo) return 0
+  return Math.round(Math.min(Math.max(Number(marca.transparencia) || 0, 0), 100))
+}
+
+// En los bocadillos tampoco se guarda una transparencia de 0
+function limpiarGlobo(marca: MarcaGlobo): MarcaGlobo {
+  const limpia: MarcaGlobo = { boca: marca.boca, globo: marca.globo }
+  if (marca.piensa) limpia.piensa = true
+  const transparencia = transparenciaDe(marca)
+  if (transparencia) limpia.transparencia = transparencia
+  return limpia
+}
+
+// Solo se guarda lo que cambia: un color igual al de partida de su forma sobra, y
+// una transparencia de 0 tambien
+function limpiarSonido(marca: MarcaSonido): MarcaSonido {
+  const forma = formaDe(marca)
+  const { letras, fondo } = FORMAS[forma]
+  const limpia: MarcaSonido = { sfx: marca.sfx, forma }
+  if (marca.letras && marca.letras !== letras) limpia.letras = marca.letras
+  if (marca.fondo && fondo && marca.fondo !== fondo) limpia.fondo = marca.fondo
+  const transparencia = transparenciaDe(marca)
+  if (transparencia) limpia.transparencia = transparencia
+  return limpia
+}
+
+// Tamanio de la letra de una onomatopeya y ancho maximo de su texto, en cqw. Las
+// largas se encogen para que su palabra mas larga quepa sin partirse: cada letra
+// ocupa como mucho algo mas de media letra de alto (0,52 em). Las ondas miden el
+// texto mas un 20 % y 2,8 letras de alto
+function medidasOnomatopeya(texto: string, forma: Forma) {
+  const { limite, tope } = FORMAS[forma]
+  const mayor = Math.max(...texto.split(/\s+/).map((trozo) => trozo.length)) * 0.52
+  if (forma === 'ondas') {
+    const tamano = Math.min(tope, limite / (mayor * 1.2 + 2.8))
+    return { tamano, ancho: (limite - 2.8 * tamano) / 1.2 }
+  }
+  return { tamano: Math.min(tope, limite / mayor), ancho: limite }
 }
 
 // Cola del bocadillo: un triangulo que sale del borde de la elipse y apunta a la
 // boca, quedandose a un paso de ella. Tiene un largo minimo para que siempre se
-// vea aunque el bocadillo este pegado a la cara. Su base se mete un poco dentro
-// del bocadillo y, como el relleno se pinta encima del borde, la union no se nota
-function colaDe(globo: { cx: number; cy: number; rx: number; ry: number }, boca: Punto) {
+// vea aunque el bocadillo este pegado a la cara. Da sus tres puntos: la base, que
+// se mete un poco dentro del bocadillo, la punta y el otro lado de la base
+function colaDe(globo: { cx: number; cy: number; rx: number; ry: number }, boca: Punto): Punto[] | null {
   const mx = boca[0]
   const my = (boca[1] * ALTO_VINETA) / 100
   const dx = mx - globo.cx
   const dy = my - globo.cy
   const largo = Math.hypot(dx, dy)
-  if (!largo || !globo.rx || !globo.ry) return ''
+  if (!largo || !globo.rx || !globo.ry) return null
   // Fraccion del camino hacia la boca en la que se cruza el borde de la elipse
   const borde = 1 / Math.hypot(dx / globo.rx, dy / globo.ry)
   // La boca queda dentro del bocadillo: no hay por donde sacar la cola
-  if (borde >= 1) return ''
+  if (borde >= 1) return null
   const ux = dx / largo
   const uy = dy / largo
   const ex = globo.cx + dx * borde
@@ -355,16 +587,212 @@ function colaDe(globo: { cx: number; cy: number; rx: number; ry: number }, boca:
   // la base recta, uno de sus extremos se quedaba fuera y hacia un pico
   const angulo = Math.atan2((ey - globo.cy) / globo.ry, (ex - globo.cx) / globo.rx)
   const paso = ancho / 2 / Math.hypot(globo.rx * Math.sin(angulo), globo.ry * Math.cos(angulo))
-  const base = (a: number) => {
+  const base = (a: number): Punto => {
     const px = globo.rx * Math.cos(a)
     const py = globo.ry * Math.sin(a)
     const k = 1 - 1.2 / Math.hypot(px, py)
     return [globo.cx + px * k, globo.cy + py * k]
   }
-  const [b1x, b1y] = base(angulo - paso)
-  const [b2x, b2y] = base(angulo + paso)
+  return [base(angulo - paso), [ex + ux * punta, ey + uy * punta], base(angulo + paso)]
+}
+
+// Elipse de un bocadillo alrededor de su texto, con el mismo hueco por arriba que
+// por los lados: el justo para que las esquinas del texto, con un pequenio margen,
+// queden dentro del borde, que tiene 0,55 de grueso. Da los semiejes hasta el
+// borde de fuera. El hueco se busca partiendo el intervalo por la mitad
+function elipseDe(ancho: number, alto: number) {
+  const x = ancho / 2 + 0.3
+  const y = alto / 2 + 0.3
+  let menos = 0
+  let mas = Math.max(x, y)
+  for (let i = 0; i < 30; i++) {
+    const hueco = (menos + mas) / 2
+    if ((x / (x + hueco)) ** 2 + (y / (y + hueco)) ** 2 > 1) menos = hueco
+    else mas = hueco
+  }
+  return { rx: x + mas + 0.55, ry: y + mas + 0.55 }
+}
+
+// Contorno del bocadillo en una sola pieza: la elipse y su cola, sin raya entre
+// las dos, para que el fondo pueda ser transparente. Cada lado de la cola sale de
+// donde corta a la elipse, y la elipse da la vuelta larga de un corte al otro. El
+// trazo va por la mitad del borde, que tiene 0,55 de grueso
+function globoDe(globo: { cx: number; cy: number; rx: number; ry: number }, cola: Punto[] | null) {
+  const rx = globo.rx - 0.275
+  const ry = globo.ry - 0.275
   const f = (n: number) => n.toFixed(2)
-  return `${f(b1x)},${f(b1y)} ${f(ex + ux * punta)},${f(ey + uy * punta)} ${f(b2x)},${f(b2y)}`
+  const arco = (hasta: Punto) => `A ${f(rx)} ${f(ry)} 0 1 1 ${f(hasta[0])} ${f(hasta[1])}`
+  if (!cola) {
+    const izquierda: Punto = [globo.cx - rx, globo.cy]
+    return `M ${f(izquierda[0])} ${f(izquierda[1])} ${arco([globo.cx + rx, globo.cy])} ${arco(izquierda)} Z`
+  }
+  const [b1, punta, b2] = cola
+  // La base queda dentro de la elipse y la punta fuera: el corte es la raiz positiva
+  const corte = (b: Punto): Punto => {
+    const dx = punta[0] - b[0]
+    const dy = punta[1] - b[1]
+    const ox = (b[0] - globo.cx) / rx
+    const oy = (b[1] - globo.cy) / ry
+    const a = (dx / rx) ** 2 + (dy / ry) ** 2
+    const m = (ox * dx) / rx + (oy * dy) / ry
+    const t = (-m + Math.sqrt(Math.max(m * m - a * (ox * ox + oy * oy - 1), 0))) / a
+    return [b[0] + dx * t, b[1] + dy * t]
+  }
+  const c1 = corte(b1)
+  const c2 = corte(b2)
+  return `M ${f(c1[0])} ${f(c1[1])} L ${f(punta[0])} ${f(punta[1])} L ${f(c2[0])} ${f(c2[1])} ${arco(c1)} Z`
+}
+
+// Onomatopeya con su marco, centrada en su punto. El marco recortado lleva tres
+// capas: la sombra, el contorno negro y el relleno, metido hacia dentro para que
+// asome el contorno. medida recibe el hueco de todo el marco, que es lo que se mide
+// para meterla dentro de la vineta y lo que coge el editor para arrastrarla
+function Onomatopeya({
+  texto,
+  marca,
+  medida
+}: {
+  texto: string
+  marca: MarcaSonido
+  medida: (nodo: HTMLElement | null) => void
+}) {
+  const forma = formaDe(marca)
+  const datos = FORMAS[forma]
+  const letras = marca.letras ?? datos.letras
+  const fondo = marca.fondo ?? datos.fondo ?? undefined
+  const opacidad = 1 - transparenciaDe(marca) / 100
+  // Con el fondo transparente el contorno se queda en su franja y la sombra solo
+  // asoma por fuera del marco
+  const mascara = opacidad < 1 ? MASCARAS[forma] : undefined
+  const { tamano, ancho } = medidasOnomatopeya(texto, forma)
+  const hueco = (dentro = '0cqw'): CSSProperties => ({
+    top: `calc(${datos.alto} + ${dentro})`,
+    bottom: `calc(${datos.alto} + ${dentro})`,
+    left: `calc(${datos.ancho} + ${dentro})`,
+    right: `calc(${datos.ancho} + ${dentro})`
+  })
+  // Contorno negro: todo el recorte por debajo del relleno, o solo su franja por
+  // encima cuando el relleno es transparente
+  const contorno = datos.recorte && (
+    <div
+      className="absolute"
+      style={{
+        ...hueco(),
+        clipPath: datos.recorte,
+        background: '#111',
+        ...(mascara && {
+          maskImage: `${mascara}, ${mascara}`,
+          maskPosition: 'center',
+          maskSize: '100% 100%, calc(100% - 2.5cqw) calc(100% - 2.5cqw)',
+          maskRepeat: 'no-repeat',
+          maskComposite: 'subtract'
+        })
+      }}
+    />
+  )
+  const gotas = (
+    <div className="absolute" style={hueco()}>
+      {GOTAS.map(([x, y, lado, borde]) => (
+        <span
+          key={`${x}-${y}`}
+          className="absolute rounded-full"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: `${lado}cqw`,
+            height: `${lado}cqw`,
+            boxSizing: 'border-box',
+            transform: 'translate(-50%, -50%)',
+            background: opacidad < 1 ? `color-mix(in srgb, ${fondo} ${opacidad * 100}%, transparent)` : fondo,
+            border: `${borde}cqw solid #111`
+          }}
+        />
+      ))}
+    </div>
+  )
+  return (
+    <div
+      className="relative"
+      style={{
+        width: 'max-content',
+        maxWidth: `${ancho}cqw`,
+        fontSize: `${tamano}cqw`,
+        lineHeight: 1,
+        transform: `translate(-50%, -50%) rotate(${datos.giro}deg)`
+      }}
+    >
+      {datos.recorte && (
+        <>
+          {forma !== 'salpicadura' && (
+            <div
+              className="absolute"
+              style={{
+                ...hueco(),
+                clipPath: datos.recorte,
+                background: '#111',
+                opacity: 0.85,
+                transform: 'translate(1.8cqw, 1.8cqw)',
+                // Se le quita el marco, algo encogido para que no quede una raya
+                // entre los dos: ese borde lo tapa el contorno
+                ...(mascara && {
+                  maskImage: `${mascara}, ${mascara}`,
+                  maskPosition: '0 0, -1.5cqw -1.5cqw',
+                  maskSize: '100% 100%, calc(100% - 0.6cqw) calc(100% - 0.6cqw)',
+                  maskRepeat: 'no-repeat',
+                  maskComposite: 'subtract'
+                })
+              }}
+            />
+          )}
+          {!mascara && contorno}
+          <div
+            className="absolute"
+            style={{
+              // Transparente, se mete un poco bajo el contorno, que va encima
+              ...hueco(mascara ? '0.95cqw' : '1.25cqw'),
+              clipPath: datos.recorte,
+              backgroundColor: fondo,
+              backgroundImage: BRILLOS[forma],
+              opacity: opacidad
+            }}
+          />
+          {mascara && contorno}
+        </>
+      )}
+      {forma === 'salpicadura' && gotas}
+      {forma === 'ondas' &&
+        ANILLOS.map(([fuera, grosor, opacidad], i) => (
+          <span
+            key={fuera}
+            className="absolute"
+            style={{
+              top: `calc(-25% - ${0.45 + fuera}em)`,
+              bottom: `calc(-25% - ${0.45 + fuera}em)`,
+              left: `calc(-10% - ${0.4 + fuera}em)`,
+              right: `calc(-10% - ${0.4 + fuera}em)`,
+              borderRadius: '50%',
+              border: `${grosor}cqw solid ${letras}`,
+              opacity: opacidad,
+              boxShadow: i === ANILLOS.length - 1 ? '0 0 0 0.54cqw #111, inset 0 0 0 0.54cqw #111' : undefined
+            }}
+          />
+        ))}
+      <span ref={medida} className="absolute" style={hueco()} />
+      <span
+        className="relative block text-center"
+        style={{
+          fontFamily: "'Bangers', 'IBM Plex Sans Variable', sans-serif",
+          fontWeight: 400,
+          letterSpacing: '0.04em',
+          color: letras,
+          transform: 'skewX(-6deg)',
+          textShadow: forma === 'salpicadura' ? SOMBRA_LETRAS_AGUA : SOMBRA_LETRAS
+        }}
+      >
+        {texto}
+      </span>
+    </div>
+  )
 }
 
 // Lector de un comic: la portada ocupa toda la caja con un boton para empezar a
@@ -388,7 +816,16 @@ function LectorComic({ comic }: { comic: string }) {
     try {
       const guardadas = JSON.parse(localStorage.getItem(CLAVE_MARCAS) ?? '{}') as TablaMarcas
       const juntas: TablaMarcas = { ...MARCAS }
-      for (const [c, tabla] of Object.entries(guardadas)) juntas[c] = { ...MARCAS[c], ...tabla }
+      // Las onomatopeyas guardadas antes de que hubiera marcos toman el del archivo
+      const conMarco = (m: Marca, delArchivo: Marca | undefined): Marca =>
+        'sfx' in m && !m.forma && delArchivo && 'sfx' in delArchivo ? { ...delArchivo, sfx: m.sfx } : m
+      for (const [c, tabla] of Object.entries(guardadas)) {
+        const propias: Record<string, Marca[]> = { ...MARCAS[c] }
+        for (const [cod, lista] of Object.entries(tabla)) {
+          propias[cod] = lista.map((m, i) => conMarco(m, MARCAS[c]?.[cod]?.[i]))
+        }
+        juntas[c] = propias
+      }
       return juntas
     } catch {
       return MARCAS
@@ -396,7 +833,11 @@ function LectorComic({ comic }: { comic: string }) {
   })
   // En el editor, la boca marcada que espera el clic del bocadillo
   const [pendiente, setPendiente] = useState<{ codigo: string; punto: Punto } | null>(null)
+  // En el editor, la onomatopeya elegida para cambiarle el marco y los colores
+  const [elegida, setElegida] = useState<{ codigo: string; indice: number } | null>(null)
   const [copiado, setCopiado] = useState(false)
+  // Cuando llega la letra de las onomatopeyas cambia su tamanio y hay que medir otra vez
+  const [fuentes, setFuentes] = useState(0)
   // Colas de los bocadillos, que dependen del tamanio real con que se pinta cada
   // uno: se miden despues de dibujarlos
   const capa = useRef<HTMLDivElement>(null)
@@ -404,17 +845,19 @@ function LectorComic({ comic }: { comic: string }) {
   // Cada bocadillo u onomatopeya que se saldria de la vineta se mete hacia dentro:
   // el ajuste depende de su tamanio real, que cambia con el idioma
   const [dibujo, setDibujo] = useState<{
-    colas: string[]
+    globos: string[]
+    colas: boolean[]
     circulos: Circulo[][]
     cajas: (Caja | null)[]
     ajustes: Punto[]
   }>({
+    globos: [],
     colas: [],
     circulos: [],
     cajas: [],
     ajustes: []
   })
-  const { colas, circulos, cajas, ajustes } = dibujo
+  const { globos, colas, circulos, cajas, ajustes } = dibujo
   // En el editor, lo que se esta arrastrando: un bocadillo, su boca o una onomatopeya
   const editor = useRef<HTMLDivElement>(null)
   const [arrastre, setArrastre] = useState<{ indice: number; parte: Parte; dx: number; dy: number } | null>(null)
@@ -678,10 +1121,28 @@ function LectorComic({ comic }: { comic: string }) {
     return () => observador.disconnect()
   }, [hayCapa])
 
+  // La letra de las onomatopeyas se pide al abrir el lector, para que este lista
+  // cuando salga la primera, y al llegar se vuelve a medir todo
+  useEffect(() => {
+    const llegada = () => setFuentes((n) => n + 1)
+    document.fonts.addEventListener('loadingdone', llegada)
+    document.fonts.load("1em 'Bangers'").catch(() => {
+      // sin la letra se ve la de repuesto, y ya queda medida con ella
+    })
+    return () => document.fonts.removeEventListener('loadingdone', llegada)
+  }, [])
+
   const claveDibujo = JSON.stringify([codigoVisible, idioma, marcasDibujadas])
   useLayoutEffect(() => {
     const r = capa.current?.getBoundingClientRect()
-    const nuevo: { colas: string[]; circulos: Circulo[][]; cajas: (Caja | null)[]; ajustes: Punto[] } = {
+    const nuevo: {
+      globos: string[]
+      colas: boolean[]
+      circulos: Circulo[][]
+      cajas: (Caja | null)[]
+      ajustes: Punto[]
+    } = {
+      globos: [],
       colas: [],
       circulos: [],
       cajas: [],
@@ -689,34 +1150,53 @@ function LectorComic({ comic }: { comic: string }) {
     }
     if (r && r.width && r.height) {
       marcasDibujadas.forEach((m, i) => {
-        const b = nodos.current[i]?.getBoundingClientRect()
+        const nodo = nodos.current[i]
+        let b = nodo?.getBoundingClientRect()
+        // Las lineas de un bocadillo van equilibradas y no llenan su caja, que se
+        // queda con el ancho maximo: se mide lo que ocupa el texto de verdad
+        if (m && nodo && 'boca' in m) {
+          const rango = document.createRange()
+          rango.selectNodeContents(nodo)
+          const texto = rango.getBoundingClientRect()
+          if (texto.width && texto.height) b = texto
+        }
         if (!m || !b) {
-          nuevo.colas.push('')
+          nuevo.globos.push('')
+          nuevo.colas.push(false)
           nuevo.circulos.push([])
           nuevo.cajas.push(null)
           nuevo.ajustes.push([0, 0])
           return
         }
+        // Todo en las unidades del svg: el ancho de la vineta vale 100 y el alto
+        // va en esas mismas unidades. De un bocadillo se mide su texto y la elipse
+        // se calcula alrededor; la onomatopeya ya trae medido todo su marco
+        const escala = 100 / r.width
+        const { rx, ry } =
+          'boca' in m
+            ? elipseDe(b.width * escala, b.height * escala)
+            : { rx: (b.width / 2) * escala, ry: (b.height / 2) * escala }
+        const elipse = {
+          cx: (b.left + b.width / 2 - r.left) * escala,
+          cy: (b.top + b.height / 2 - r.top) * escala,
+          rx,
+          ry
+        }
+        // Hueco que ocupa, en tanto por ciento de la vineta
         const caja: Caja = {
-          x: ((b.left - r.left) / r.width) * 100,
-          y: ((b.top - r.top) / r.height) * 100,
-          w: (b.width / r.width) * 100,
-          h: (b.height / r.height) * 100
+          x: elipse.cx - rx,
+          y: ((elipse.cy - ry) / ALTO_VINETA) * 100,
+          w: 2 * rx,
+          h: ((2 * ry) / ALTO_VINETA) * 100
         }
         nuevo.cajas.push(caja)
         // Se calcula desde donde caeria sin ajuste, asi el resultado no cambia de
         // una pasada a otra
         const previo = ajustes[i] ?? [0, 0]
         nuevo.ajustes.push([encajar(caja.x - previo[0], caja.w, 1.5), encajar(caja.y - previo[1], caja.h, 1)])
-        // Para la cola y los circulitos, el alto va en las mismas unidades que el ancho
-        const escala = 100 / r.width
-        const elipse = {
-          cx: (b.left + b.width / 2 - r.left) * escala,
-          cy: (b.top + b.height / 2 - r.top) * escala,
-          rx: (b.width / 2) * escala,
-          ry: (b.height / 2) * escala
-        }
-        nuevo.colas.push('boca' in m && !m.piensa ? colaDe(elipse, m.boca) : '')
+        const cola = 'boca' in m && !m.piensa ? colaDe(elipse, m.boca) : null
+        nuevo.globos.push('boca' in m ? globoDe(elipse, cola) : '')
+        nuevo.colas.push(!!cola)
         nuevo.circulos.push('boca' in m && m.piensa ? circulosDe(elipse, m.boca) : [])
       })
     }
@@ -730,7 +1210,7 @@ function LectorComic({ comic }: { comic: string }) {
       return JSON.stringify(viejo) === JSON.stringify(nuevo) ? viejo : nuevo
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claveDibujo, anchoCapa, JSON.stringify(ajustes)])
+  }, [claveDibujo, anchoCapa, JSON.stringify(ajustes), fuentes])
 
   // ---- Editor de bocadillos (solo en local) ----
   const guardarMarcas = (lista: Marca[]) => {
@@ -751,6 +1231,7 @@ function LectorComic({ comic }: { comic: string }) {
     return [((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100]
   }
   const clicEditor = (e: EventoRaton<HTMLDivElement>) => {
+    setElegida(null)
     if (!lista) return
     const crudo = puntoDe(e)
     if (!crudo) return
@@ -759,7 +1240,9 @@ function LectorComic({ comic }: { comic: string }) {
     const siguiente = partes.elementos[hechas.length]
     if (!siguiente) return
     if (siguiente.tipo === 'sfx') {
-      guardarMarcas([...hechas, { sfx: punto }])
+      // Recien puesta queda elegida, para darle ya su marco
+      guardarMarcas([...hechas, { sfx: punto, forma: 'estallido' }])
+      setElegida({ codigo: codigoVisible, indice: hechas.length })
     } else if (!pendiente || pendiente.codigo !== codigoVisible) {
       setPendiente({ codigo: codigoVisible, punto })
     } else {
@@ -768,13 +1251,15 @@ function LectorComic({ comic }: { comic: string }) {
     }
   }
   // Todo lo marcado se puede arrastrar: el bocadillo, su boca y las onomatopeyas.
-  // Se guarda la distancia entre el raton y el punto para que no pegue un salto
+  // Se guarda la distancia entre el raton y el punto para que no pegue un salto.
+  // Lo que se coge queda elegido
   const empezarArrastre = (e: EventoPuntero<HTMLElement>, indice: number, parte: Parte, punto: Punto) => {
     e.stopPropagation()
     const p = puntoDe(e)
     if (!lista || !p) return
     e.currentTarget.setPointerCapture(e.pointerId)
     setArrastre({ indice, parte, dx: p[0] - punto[0], dy: p[1] - punto[1] })
+    setElegida({ codigo: codigoVisible, indice })
   }
   const moverArrastre = (e: EventoPuntero<HTMLDivElement>) => {
     const p = puntoDe(e)
@@ -783,7 +1268,7 @@ function LectorComic({ comic }: { comic: string }) {
     const nuevas = marcasVisibles.slice()
     const m = nuevas[arrastre.indice]
     if (!m) return
-    if ('sfx' in m) nuevas[arrastre.indice] = { sfx: punto }
+    if ('sfx' in m) nuevas[arrastre.indice] = { ...m, sfx: punto }
     else if (arrastre.parte === 'boca') nuevas[arrastre.indice] = { ...m, boca: punto }
     else nuevas[arrastre.indice] = { ...m, globo: punto }
     guardarMarcas(nuevas)
@@ -802,6 +1287,32 @@ function LectorComic({ comic }: { comic: string }) {
     if (!lista) return
     guardarMarcas([])
     setPendiente(null)
+    setElegida(null)
+  }
+  // Lo elegido: de un bocadillo se cambia la transparencia, y de una onomatopeya
+  // tambien su marco y sus colores. Al cambiar de marco vuelve a los colores de
+  // partida del nuevo, sin transparencia
+  const indiceElegida = elegida?.codigo === codigoVisible ? elegida.indice : -1
+  const marcaElegida = marcasDibujadas[indiceElegida]
+  const sonidoElegido = marcaElegida && 'sfx' in marcaElegida ? marcaElegida : null
+  const formaElegida = sonidoElegido ? formaDe(sonidoElegido) : 'estallido'
+  const cambiarSonido = (cambio: Omit<MarcaSonido, 'sfx'>) => {
+    if (!sonidoElegido) return
+    const nuevas = marcasVisibles.slice()
+    nuevas[indiceElegida] = limpiarSonido(
+      cambio.forma ? { sfx: sonidoElegido.sfx, forma: cambio.forma } : { ...sonidoElegido, ...cambio }
+    )
+    guardarMarcas(nuevas)
+  }
+  const cambiarTransparencia = (transparencia: number) => {
+    if (!marcaElegida) return
+    if ('sfx' in marcaElegida) {
+      cambiarSonido({ transparencia })
+      return
+    }
+    const nuevas = marcasVisibles.slice()
+    nuevas[indiceElegida] = limpiarGlobo({ ...marcaElegida, transparencia })
+    guardarMarcas(nuevas)
   }
   // Salta a la siguiente vineta que tenga algo sin marcar
   const pendienteDe = (n: number) => {
@@ -850,8 +1361,10 @@ function LectorComic({ comic }: { comic: string }) {
     const cuadran = marcasVisibles.every((m, i) => marcaCuadra(partes.elementos[i], m))
     // Un bocadillo que tapa la boca se queda sin cola: hay que colocarlo mas lejos
     const tapaBoca = marcasDibujadas.some(
-      (m, i) => !!m && 'boca' in m && colas[i] === '' && !(circulos[i]?.length ?? 0)
+      (m, i) => !!m && 'boca' in m && !colas[i] && !(circulos[i]?.length ?? 0)
     )
+    const ayudas = ['arrastra para mover', 'clic para elegir']
+    if (partes.elementos.some((el) => el.tipo === 'globo')) ayudas.push('doble clic en un bocadillo para que piense')
     rotuloEditor = !lista
       ? 'Cargando...'
       : !partes.elementos.length
@@ -861,7 +1374,7 @@ function LectorComic({ comic }: { comic: string }) {
           : completas
             ? tapaBoca
               ? `Un bocadillo tapa la boca y se queda sin cola: Rehacer · ${cuenta}`
-              : `Lista: arrastra para mover, doble clic en un bocadillo para que piense · ${cuenta}`
+              : `Lista: ${ayudas.join(', ')} · ${cuenta}`
             : siguiente?.tipo === 'sfx'
               ? `Clic donde va «${siguiente.texto}» · ${cuenta}`
               : pendiente?.codigo === codigoVisible
@@ -1043,8 +1556,8 @@ function LectorComic({ comic }: { comic: string }) {
 
           {(actual.tipo === 'caratula' || actual.tipo === 'vineta') && flechasLaterales}
           {/* Bocadillos y onomatopeyas, encima de la vineta y por debajo de las
-              flechas. La cola va en dos capas: el trazo por debajo del bocadillo y
-              el relleno por encima, que tapa el borde donde se unen */}
+              flechas. El bocadillo, con su cola o sus circulitos, se dibuja debajo
+              en el svg, y su texto encima */}
           {hayCapa && (
             <div
               ref={capa}
@@ -1053,12 +1566,35 @@ function LectorComic({ comic }: { comic: string }) {
               style={{ height: `${ALTO_VINETA}cqw` }}
             >
               <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 100 ${ALTO_VINETA}`}>
-                {colas.map(
-                  (c, i) =>
-                    c && (
-                      <polygon key={i} points={c} fill="#fff" stroke="#111" strokeWidth={1.1} strokeLinejoin="round" />
-                    )
-                )}
+                {globos.map((d, i) => {
+                  const m = marcasDibujadas[i]
+                  if (!d || !m) return null
+                  const relleno = 1 - transparenciaDe(m) / 100
+                  return (
+                    <g key={i}>
+                      <path
+                        d={d}
+                        fill="#fff"
+                        fillOpacity={relleno}
+                        stroke="#111"
+                        strokeWidth={0.55}
+                        strokeLinejoin="round"
+                      />
+                      {circulos[i]?.map((c) => (
+                        <circle
+                          key={`${c.cx}-${c.cy}`}
+                          cx={c.cx}
+                          cy={c.cy}
+                          r={c.r}
+                          fill="#fff"
+                          fillOpacity={relleno}
+                          stroke="#111"
+                          strokeWidth={0.55}
+                        />
+                      ))}
+                    </g>
+                  )
+                })}
               </svg>
               {partes.elementos.map((el, i) => {
                 const m = marcasDibujadas[i]
@@ -1070,24 +1606,13 @@ function LectorComic({ comic }: { comic: string }) {
                       className="absolute"
                       style={{ left: `${m.sfx[0] + (ajustes[i]?.[0] ?? 0)}%`, top: `${m.sfx[1] + (ajustes[i]?.[1] ?? 0)}%` }}
                     >
-                      <span
-                        ref={(nodo) => {
+                      <Onomatopeya
+                        texto={el.texto}
+                        marca={m}
+                        medida={(nodo) => {
                           nodos.current[i] = nodo
                         }}
-                        className="block text-center font-extrabold uppercase"
-                        style={{
-                          width: 'max-content',
-                          maxWidth: '84cqw',
-                          transform: 'translate(-50%, -50%) rotate(-7deg)',
-                          fontSize: `${tamanoOnomatopeya(el.texto)}cqw`,
-                          lineHeight: 1,
-                          letterSpacing: '0.02em',
-                          color: '#ffc93c',
-                          textShadow: CONTORNO
-                        }}
-                      >
-                        {el.texto}
-                      </span>
+                      />
                     </div>
                   )
                 }
@@ -1097,51 +1622,28 @@ function LectorComic({ comic }: { comic: string }) {
                     className="absolute"
                     style={{ left: `${m.globo[0] + (ajustes[i]?.[0] ?? 0)}%`, top: `${m.globo[1] + (ajustes[i]?.[1] ?? 0)}%` }}
                   >
-                    {/* El texto manda: la elipse se dibuja detras, un 44 % mas grande que
-                        el bloque de texto en cada sentido. Es la elipse justa que pasa por
-                        sus cuatro esquinas, asi ninguna linea toca el borde */}
+                    {/* El texto manda: se mide este bloque y el svg dibuja el bocadillo
+                        a su alrededor */}
                     <div
-                      className="relative text-center font-semibold uppercase"
+                      ref={(nodo) => {
+                        nodos.current[i] = nodo
+                      }}
+                      className="text-center font-semibold"
                       style={{
                         width: 'max-content',
                         maxWidth: '40cqw',
                         transform: 'translate(-50%, -50%)',
-                        padding: '1.6cqw',
                         fontSize: '4.2cqw',
                         lineHeight: 1.2,
-                        letterSpacing: '0.02em',
                         color: '#111',
                         textWrap: 'balance'
                       }}
                     >
-                      <div
-                        ref={(nodo) => {
-                          nodos.current[i] = nodo
-                        }}
-                        className="absolute"
-                        style={{
-                          left: '-22%',
-                          right: '-22%',
-                          top: '-22%',
-                          bottom: '-22%',
-                          background: '#fff',
-                          border: '0.55cqw solid #111',
-                          borderRadius: '50%'
-                        }}
-                      />
-                      <span className="relative">{el.texto}</span>
+                      {el.texto}
                     </div>
                   </div>
                 )
               })}
-              <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 100 ${ALTO_VINETA}`}>
-                {colas.map((c, i) => c && <polygon key={i} points={c} fill="#fff" />)}
-                {circulos.map((lista, i) =>
-                  lista.map((c, j) => (
-                    <circle key={`${i}-${j}`} cx={c.cx} cy={c.cy} r={c.r} fill="#fff" stroke="#111" strokeWidth={0.55} />
-                  ))
-                )}
-              </svg>
             </div>
           )}
 
@@ -1150,9 +1652,12 @@ function LectorComic({ comic }: { comic: string }) {
           {EDITOR_BOCADILLOS && actual.tipo === 'vineta' && (
             <div
               ref={editor}
-              className="absolute inset-x-0 top-0 z-20 cursor-crosshair"
+              className="absolute inset-x-0 top-0 z-20 cursor-crosshair select-none"
               style={{ height: `${ALTO_VINETA}cqw`, touchAction: 'none' }}
               onClick={clicEditor}
+              // Sin esto, tras un doble clic el navegador empezaba a arrastrar la
+              // seleccion y cortaba el arrastre al primer movimiento
+              onDragStart={(e) => e.preventDefault()}
               onPointerMove={moverArrastre}
               onPointerUp={soltarArrastre}
               onPointerCancel={soltarArrastre}
@@ -1167,7 +1672,9 @@ function LectorComic({ comic }: { comic: string }) {
                 return (
                   <div key={i}>
                     <div
-                      className="absolute cursor-move outline-2 outline-transparent outline-dashed hover:outline-[#ffc93c]"
+                      className={`absolute cursor-move outline-2 outline-dashed ${
+                        i === indiceElegida ? 'outline-[#ffc93c]' : 'outline-transparent hover:outline-[#ffc93c]'
+                      }`}
                       style={{
                         left: `${caja.x}%`,
                         top: `${caja.y}%`,
@@ -1250,6 +1757,91 @@ function LectorComic({ comic }: { comic: string }) {
                   {copiado ? 'Copiado' : 'Copiar JSON'}
                 </button>
               </div>
+              {/* Lo que se puede cambiar de lo elegido. Va justo debajo de la vineta,
+                  encima del texto, para no tapar nada del dibujo */}
+              {marcaElegida && (
+                <div
+                  className="absolute inset-x-0 flex cursor-default flex-col gap-1 bg-black px-2 py-1.5 font-mono text-[11px] leading-tight text-white"
+                  style={{ top: '100%' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {sonidoElegido && (
+                    <>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="w-12 shrink-0">Marco</span>
+                        {LISTA_FORMAS.map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => cambiarSonido({ forma: f })}
+                            className="cursor-pointer rounded px-1.5 py-0.5"
+                            style={
+                              f === formaElegida
+                                ? { background: '#ffc93c', color: '#000' }
+                                : { background: 'rgba(255, 255, 255, 0.2)' }
+                            }
+                          >
+                            {FORMAS[f].nombre}
+                          </button>
+                        ))}
+                      </div>
+                      {(['letras', 'fondo'] as const).map((parte) => {
+                        const deForma = FORMAS[formaElegida][parte]
+                        // Las ondas y la onomatopeya sin marco no llevan fondo
+                        if (!deForma) return null
+                        const color = sonidoElegido[parte] ?? deForma
+                        const poner = (nuevo: string) =>
+                          cambiarSonido(parte === 'letras' ? { letras: nuevo } : { fondo: nuevo })
+                        return (
+                          <div key={parte} className="flex flex-wrap items-center gap-1">
+                            <span className="w-12 shrink-0">{parte === 'letras' ? 'Letras' : 'Fondo'}</span>
+                            {PALETA.map(([nombre, valor]) => (
+                              <button
+                                key={valor}
+                                type="button"
+                                title={nombre}
+                                aria-label={nombre}
+                                onClick={() => poner(valor)}
+                                className="size-4 cursor-pointer rounded-full border border-white/50"
+                                style={{
+                                  background: valor,
+                                  outline: valor === color ? '2px solid #ffc93c' : undefined,
+                                  outlineOffset: 1
+                                }}
+                              />
+                            ))}
+                            <input
+                              type="color"
+                              value={color}
+                              title="Otro color"
+                              aria-label={`Otro color de ${parte}`}
+                              onChange={(e) => poner(e.target.value)}
+                              className="h-5 w-7 cursor-pointer"
+                            />
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                  {(!sonidoElegido || FORMAS[formaElegida].fondo) && (
+                    <div className="flex items-center gap-1">
+                      <span className="shrink-0">Transparencia</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={transparenciaDe(marcaElegida)}
+                        aria-label="Transparencia del fondo"
+                        onChange={(e) => cambiarTransparencia(Number(e.target.value))}
+                        className="min-w-0 grow cursor-pointer"
+                        style={{ accentColor: '#ffc93c' }}
+                      />
+                      <span className="w-10 shrink-0 text-right">{transparenciaDe(marcaElegida)} %</span>
+                    </div>
+                  )}
+                </div>
+              )}
               {pendiente?.codigo === codigoVisible && (
                 <span
                   className="absolute rounded-full border-2 border-white"

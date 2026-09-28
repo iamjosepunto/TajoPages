@@ -1,12 +1,12 @@
 {
   "celestial-invader": {
-    "003": [{"boca": [61.2, 40.9], "globo": [78.9, 26.9], "piensa": true, "transparencia": 25}],
+    "003": [{"boca": [61.2, 40.9], "globo": [78.9, 26.9], "transparencia": 25}],
     "008": [{"sfx": [48.6, 50.9], "forma": "estallido", "fondo": "#ff8a1f", "transparencia": 50}],
     "013": [
       {"boca": [39.6, 37.8], "globo": [28.6, 28.7], "transparencia": 25},
       {"boca": [65.7, 37.5], "globo": [74.4, 18.8], "transparencia": 25}
     ],
-    "015": [{"sfx": [50.5, 43.8], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
+    "015": [{"sfx": [45.8, 47.6], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
     "016": [
       {"boca": [26.8, 39.5], "globo": [30.1, 20.5], "transparencia": 25},
       {"boca": [52.1, 37.3], "globo": [71.1, 29.6], "transparencia": 25}
@@ -27,7 +27,7 @@
     "049": [{"sfx": [71.3, 21.4], "forma": "ondas", "letras": "#9be15d"}],
     "051": [{"sfx": [74.6, 40.7], "forma": "grieta", "transparencia": 70}],
     "058": [{"boca": [26.7, 37.9], "globo": [15.4, 32]}],
-    "059": [{"sfx": [72, 34.8], "forma": "estallido"}],
+    "059": [{"sfx": [91.6, 36.6], "forma": "estallido"}],
     "062": [
       {"boca": [27.5, 20.9], "globo": [38.3, 14.6], "transparencia": 25},
       {"boca": [86, 36.4], "globo": [72.7, 29.6], "transparencia": 25},

@@ -217,8 +217,16 @@ type Punto = [number, number]
 type Forma = 'estallido' | 'grieta' | 'salpicadura' | 'ondas' | 'nube' | 'ninguna'
 // forma, letras y fondo: el marco de la onomatopeya y sus colores. Sin colores
 // lleva los de partida de su forma. transparencia: cuanto deja ver la vineta a
-// traves del fondo, de 0 a 100
-type MarcaSonido = { sfx: Punto; forma?: Forma; letras?: string; fondo?: string; transparencia?: number }
+// traves del fondo, de 0 a 100. escala: su tamanio, del 30 al 100 % del que le
+// toca, que es el mayor que cabe en la vineta
+type MarcaSonido = {
+  sfx: Punto
+  forma?: Forma
+  letras?: string
+  fondo?: string
+  transparencia?: number
+  escala?: number
+}
 // piensa: bocadillo de pensamiento, con circulitos hacia la cabeza en vez de cola.
 // transparencia: como en las onomatopeyas, la de su fondo blanco
 type MarcaGlobo = { boca: Punto; globo: Punto; piensa?: boolean; transparencia?: number }
@@ -234,9 +242,16 @@ const MARCAS = bocadillosJson as unknown as TablaMarcas
 const ALTO_VINETA = (976 / 576) * 100
 // Las onomatopeyas van al principio del texto, en mayusculas, y cada palabra
 // acaba en exclamacion o en puntos suspensivos: ¡BOOOOM!, ¡PUM... PUM... PUM!
-const ONOMATOPEYA = /^(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)\s*)+/
+// Si hay varias, van separadas por una barra y cada una se coloca por su cuenta,
+// y entonces sus palabras pueden ir sin nada detras: BLA / BLA / BLA BLA
+const ONOMATOPEYA = /^(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)\s*(?:\/\s*)?)+/
+const ONOMATOPEYAS_CON_BARRA =
+  /^(?:(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)?\s*)+\/\s*)+(?:¡?[A-ZÁÉÍÓÚÑÜ]{2,}(?:!|\.\.\.!?)?\s*)*/
 const CLAVE_EDITOR = 'tajopages.bocadillos.editor'
 const CLAVE_MARCAS = 'tajopages.bocadillos.marcas'
+// Nunca se ve una barra de desplazamiento vertical: si un texto no cabe se puede
+// desplazar igual, con la rueda o con el dedo, pero sin barra
+const SIN_BARRA = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
 
 // Recortes de los marcos. El estallido y la grieta son puntas dibujadas a mano; la
 // nube y la salpicadura salen del radio que tienen en cada angulo, en fraccion de
@@ -451,10 +466,13 @@ const EDITOR_BOCADILLOS = (() => {
 // principio y lo que dicen los personajes entre comillas, y la narracion, que es
 // lo que sobra y sigue yendo debajo
 function partesDe(texto: string, idioma: 'es' | 'en') {
-  const sonido = texto.match(ONOMATOPEYA)
+  const sonido = texto.match(ONOMATOPEYAS_CON_BARRA) ?? texto.match(ONOMATOPEYA)
   const resto = sonido ? texto.slice(sonido[0].length) : texto
   const comillas = idioma === 'es' ? /«([^»]*)»/g : /“([^”]*)”/g
-  const elementos: Elemento[] = sonido ? [{ tipo: 'sfx', texto: sonido[0].trim() }] : []
+  const elementos: Elemento[] = (sonido?.[0].split('/') ?? [])
+    .map((trozo) => trozo.trim())
+    .filter(Boolean)
+    .map((trozo) => ({ tipo: 'sfx', texto: trozo }))
   for (const dicho of resto.matchAll(comillas)) elementos.push({ tipo: 'globo', texto: dicho[1].trim() })
   const narracion = resto.replace(comillas, ' ').replace(/\s+/g, ' ').trim()
   return { elementos, narracion }
@@ -533,8 +551,13 @@ function limpiarGlobo(marca: MarcaGlobo): MarcaGlobo {
   return limpia
 }
 
+// Tamanio de una onomatopeya entre el 30 y el 100 %; sin escala va al 100
+function escalaDe(marca: MarcaSonido) {
+  return Math.round(Math.min(Math.max(Number(marca.escala) || 100, 30), 100))
+}
+
 // Solo se guarda lo que cambia: un color igual al de partida de su forma sobra, y
-// una transparencia de 0 tambien
+// una transparencia de 0 o un tamanio del 100 % tambien
 function limpiarSonido(marca: MarcaSonido): MarcaSonido {
   const forma = formaDe(marca)
   const { letras, fondo } = FORMAS[forma]
@@ -543,6 +566,8 @@ function limpiarSonido(marca: MarcaSonido): MarcaSonido {
   if (marca.fondo && fondo && marca.fondo !== fondo) limpia.fondo = marca.fondo
   const transparencia = transparenciaDe(marca)
   if (transparencia) limpia.transparencia = transparencia
+  const escala = escalaDe(marca)
+  if (escala < 100) limpia.escala = escala
   return limpia
 }
 
@@ -718,7 +743,8 @@ function Onomatopeya({
         maxWidth: `${ancho}cqw`,
         fontSize: `${tamano}cqw`,
         lineHeight: 1,
-        transform: `translate(-50%, -50%) rotate(${datos.giro}deg)`
+        // Encogida, se reduce todo junto: letras, marco, contorno y sombras
+        transform: `translate(-50%, -50%) rotate(${datos.giro}deg) scale(${escalaDe(marca) / 100})`
       }}
     >
       {datos.recorte && (
@@ -819,10 +845,17 @@ function LectorComic({ comic }: { comic: string }) {
       // Las onomatopeyas guardadas antes de que hubiera marcos toman el del archivo
       const conMarco = (m: Marca, delArchivo: Marca | undefined): Marca =>
         'sfx' in m && !m.forma && delArchivo && 'sfx' in delArchivo ? { ...delArchivo, sfx: m.sfx } : m
+      // Si el texto de una vineta ha cambiado y lo guardado ya no cuadra con el pero
+      // lo del archivo si, manda el archivo
+      const lengua = i18n.resolvedLanguage === 'es' ? 'es' : 'en'
       for (const [c, tabla] of Object.entries(guardadas)) {
         const propias: Record<string, Marca[]> = { ...MARCAS[c] }
         for (const [cod, lista] of Object.entries(tabla)) {
-          propias[cod] = lista.map((m, i) => conMarco(m, MARCAS[c]?.[cod]?.[i]))
+          const guardada = lista.map((m, i) => conMarco(m, MARCAS[c]?.[cod]?.[i]))
+          const delArchivo = MARCAS[c]?.[cod] ?? []
+          const { elementos } = partesDe(t(`vinetas.${c}.${cod}`), lengua)
+          propias[cod] =
+            !marcasCompletas(elementos, guardada) && marcasCompletas(elementos, delArchivo) ? delArchivo : guardada
         }
         juntas[c] = propias
       }
@@ -1290,8 +1323,8 @@ function LectorComic({ comic }: { comic: string }) {
     setElegida(null)
   }
   // Lo elegido: de un bocadillo se cambia la transparencia, y de una onomatopeya
-  // tambien su marco y sus colores. Al cambiar de marco vuelve a los colores de
-  // partida del nuevo, sin transparencia
+  // tambien su marco, sus colores y su tamanio. Al cambiar de marco vuelve a los
+  // colores de partida del nuevo, sin transparencia, y conserva el tamanio
   const indiceElegida = elegida?.codigo === codigoVisible ? elegida.indice : -1
   const marcaElegida = marcasDibujadas[indiceElegida]
   const sonidoElegido = marcaElegida && 'sfx' in marcaElegida ? marcaElegida : null
@@ -1300,7 +1333,9 @@ function LectorComic({ comic }: { comic: string }) {
     if (!sonidoElegido) return
     const nuevas = marcasVisibles.slice()
     nuevas[indiceElegida] = limpiarSonido(
-      cambio.forma ? { sfx: sonidoElegido.sfx, forma: cambio.forma } : { ...sonidoElegido, ...cambio }
+      cambio.forma
+        ? { sfx: sonidoElegido.sfx, forma: cambio.forma, escala: sonidoElegido.escala }
+        : { ...sonidoElegido, ...cambio }
     )
     guardarMarcas(nuevas)
   }
@@ -1459,7 +1494,7 @@ function LectorComic({ comic }: { comic: string }) {
             <>
               {/* El indice: los ocho capitulos con su romano y su titulo, cada uno
                   lleva directo a su caratula */}
-              <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '7cqw 6cqw' }}>
+              <div className={`min-h-0 flex-1 overflow-y-auto ${SIN_BARRA}`} style={{ padding: '7cqw 6cqw' }}>
                 <h2
                   className="text-center font-mono uppercase text-muted"
                   style={{ fontSize: '4.5cqw', letterSpacing: '0.3em', lineHeight: 1 }}
@@ -1545,7 +1580,7 @@ function LectorComic({ comic }: { comic: string }) {
                 onLoad={marcarCargada}
                 onError={marcarCargada}
               />
-              <div className="min-h-0 flex-1 overflow-y-auto" style={{ padding: '3cqw 5cqw' }}>
+              <div className={`min-h-0 flex-1 overflow-y-auto ${SIN_BARRA}`} style={{ padding: '3cqw 5cqw' }}>
                 <p className="text-ink/80" style={{ fontSize: '7.8cqw', lineHeight: 1.35 }}>
                   {textoDebajo}
                 </p>
@@ -1823,6 +1858,23 @@ function LectorComic({ comic }: { comic: string }) {
                       })}
                     </>
                   )}
+                  {sonidoElegido && (
+                    <div className="flex items-center gap-1">
+                      <span className="shrink-0">Tamaño</span>
+                      <input
+                        type="range"
+                        min={30}
+                        max={100}
+                        step={5}
+                        value={escalaDe(sonidoElegido)}
+                        aria-label="Tamaño de la onomatopeya"
+                        onChange={(e) => cambiarSonido({ escala: Number(e.target.value) })}
+                        className="min-w-0 grow cursor-pointer"
+                        style={{ accentColor: '#ffc93c' }}
+                      />
+                      <span className="w-10 shrink-0 text-right">{escalaDe(sonidoElegido)} %</span>
+                    </div>
+                  )}
                   {(!sonidoElegido || FORMAS[formaElegida].fondo) && (
                     <div className="flex items-center gap-1">
                       <span className="shrink-0">Transparencia</span>
@@ -2060,7 +2112,7 @@ function PantallaContacto() {
 
   return (
     <div
-      className="flex h-full w-full flex-col overflow-y-auto border border-crema bg-fondo"
+      className={`flex h-full w-full flex-col overflow-y-auto border border-crema bg-fondo ${SIN_BARRA}`}
       style={{ containerType: 'size' }}
     >
       <ImagenConSpinner

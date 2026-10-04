@@ -217,8 +217,11 @@ type Punto = [number, number]
 type Forma = 'estallido' | 'grieta' | 'salpicadura' | 'ondas' | 'nube' | 'ninguna'
 // forma, letras y fondo: el marco de la onomatopeya y sus colores. Sin colores
 // lleva los de partida de su forma. transparencia: cuanto deja ver la vineta a
-// traves del fondo, de 0 a 100. escala: su tamanio, del 30 al 100 % del que le
-// toca, que es el mayor que cabe en la vineta
+// traves del fondo, de 0 a 100. escala: su tamanio, del 30 al 200 % del que le
+// toca, que es el mayor que cabe a lo ancho de la vineta; por encima del 100 % es
+// para las que van giradas, que tienen todo el alto. giro: su inclinacion en
+// grados, de -90 (en vertical, leyendose hacia arriba) a 90; sin giro lleva el de
+// su forma
 type MarcaSonido = {
   sfx: Punto
   forma?: Forma
@@ -226,6 +229,7 @@ type MarcaSonido = {
   fondo?: string
   transparencia?: number
   escala?: number
+  giro?: number
 }
 // piensa: bocadillo de pensamiento, con circulitos hacia la cabeza en vez de cola.
 // transparencia: como en las onomatopeyas, la de su fondo blanco
@@ -551,13 +555,19 @@ function limpiarGlobo(marca: MarcaGlobo): MarcaGlobo {
   return limpia
 }
 
-// Tamanio de una onomatopeya entre el 30 y el 100 %; sin escala va al 100
+// Tamanio de una onomatopeya entre el 30 y el 200 %; sin escala va al 100
 function escalaDe(marca: MarcaSonido) {
-  return Math.round(Math.min(Math.max(Number(marca.escala) || 100, 30), 100))
+  return Math.round(Math.min(Math.max(Number(marca.escala) || 100, 30), 200))
+}
+
+// Inclinacion de una onomatopeya entre -90 y 90 grados
+function giroDe(marca: MarcaSonido) {
+  const giro = Number(marca.giro)
+  return Number.isFinite(giro) ? Math.round(Math.min(Math.max(giro, -90), 90)) : FORMAS[formaDe(marca)].giro
 }
 
 // Solo se guarda lo que cambia: un color igual al de partida de su forma sobra, y
-// una transparencia de 0 o un tamanio del 100 % tambien
+// una transparencia de 0, un tamanio del 100 % o el giro de su forma tambien
 function limpiarSonido(marca: MarcaSonido): MarcaSonido {
   const forma = formaDe(marca)
   const { letras, fondo } = FORMAS[forma]
@@ -567,7 +577,9 @@ function limpiarSonido(marca: MarcaSonido): MarcaSonido {
   const transparencia = transparenciaDe(marca)
   if (transparencia) limpia.transparencia = transparencia
   const escala = escalaDe(marca)
-  if (escala < 100) limpia.escala = escala
+  if (escala !== 100) limpia.escala = escala
+  const giro = giroDe(marca)
+  if (giro !== FORMAS[forma].giro) limpia.giro = giro
   return limpia
 }
 
@@ -744,7 +756,7 @@ function Onomatopeya({
         fontSize: `${tamano}cqw`,
         lineHeight: 1,
         // Encogida, se reduce todo junto: letras, marco, contorno y sombras
-        transform: `translate(-50%, -50%) rotate(${datos.giro}deg) scale(${escalaDe(marca) / 100})`
+        transform: `translate(-50%, -50%) rotate(${giroDe(marca)}deg) scale(${escalaDe(marca) / 100})`
       }}
     >
       {datos.recorte && (
@@ -1323,8 +1335,9 @@ function LectorComic({ comic }: { comic: string }) {
     setElegida(null)
   }
   // Lo elegido: de un bocadillo se cambia la transparencia, y de una onomatopeya
-  // tambien su marco, sus colores y su tamanio. Al cambiar de marco vuelve a los
-  // colores de partida del nuevo, sin transparencia, y conserva el tamanio
+  // tambien su marco, sus colores, su tamanio y su giro. Al cambiar de marco vuelve
+  // a los colores de partida del nuevo, sin transparencia, y conserva el tamanio y
+  // el giro si se habia cambiado
   const indiceElegida = elegida?.codigo === codigoVisible ? elegida.indice : -1
   const marcaElegida = marcasDibujadas[indiceElegida]
   const sonidoElegido = marcaElegida && 'sfx' in marcaElegida ? marcaElegida : null
@@ -1334,7 +1347,7 @@ function LectorComic({ comic }: { comic: string }) {
     const nuevas = marcasVisibles.slice()
     nuevas[indiceElegida] = limpiarSonido(
       cambio.forma
-        ? { sfx: sonidoElegido.sfx, forma: cambio.forma, escala: sonidoElegido.escala }
+        ? { sfx: sonidoElegido.sfx, forma: cambio.forma, escala: sonidoElegido.escala, giro: sonidoElegido.giro }
         : { ...sonidoElegido, ...cambio }
     )
     guardarMarcas(nuevas)
@@ -1864,7 +1877,7 @@ function LectorComic({ comic }: { comic: string }) {
                       <input
                         type="range"
                         min={30}
-                        max={100}
+                        max={200}
                         step={5}
                         value={escalaDe(sonidoElegido)}
                         aria-label="Tamaño de la onomatopeya"
@@ -1873,6 +1886,23 @@ function LectorComic({ comic }: { comic: string }) {
                         style={{ accentColor: '#ffc93c' }}
                       />
                       <span className="w-10 shrink-0 text-right">{escalaDe(sonidoElegido)} %</span>
+                    </div>
+                  )}
+                  {sonidoElegido && (
+                    <div className="flex items-center gap-1">
+                      <span className="shrink-0">Giro</span>
+                      <input
+                        type="range"
+                        min={-90}
+                        max={90}
+                        step={1}
+                        value={giroDe(sonidoElegido)}
+                        aria-label="Giro de la onomatopeya"
+                        onChange={(e) => cambiarSonido({ giro: Number(e.target.value) })}
+                        className="min-w-0 grow cursor-pointer"
+                        style={{ accentColor: '#ffc93c' }}
+                      />
+                      <span className="w-10 shrink-0 text-right">{giroDe(sonidoElegido)}°</span>
                     </div>
                   )}
                   {(!sonidoElegido || FORMAS[formaElegida].fondo) && (

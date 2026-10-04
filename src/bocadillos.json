@@ -1,11 +1,11 @@
 {
   "celestial-invader": {
-    "003": [{"boca": [61.2, 40.9], "globo": [78.9, 26.9], "transparencia": 25}],
+    "003": [{"boca": [53.6, 47.8], "globo": [28, 55.8], "transparencia": 25}],
     "006": [{"sfx": [57.5, 31], "forma": "estallido", "letras": "#ff4d4d", "transparencia": 25}],
     "008": [{"sfx": [48.6, 50.9], "forma": "estallido", "fondo": "#ff8a1f", "transparencia": 50}],
     "013": [
-      {"boca": [39.6, 37.8], "globo": [28.6, 28.7], "transparencia": 25},
-      {"boca": [65.7, 37.5], "globo": [74.4, 18.8], "transparencia": 25}
+      {"boca": [43.2, 45.2], "globo": [24.1, 56], "transparencia": 25},
+      {"boca": [61.4, 42.6], "globo": [83.9, 52.8], "transparencia": 25}
     ],
     "015": [{"sfx": [45.8, 47.6], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
     "016": [
@@ -14,18 +14,22 @@
       {"sfx": [88.5, 57], "forma": "ninguna", "escala": 70},
       {"sfx": [22.7, 51.1], "forma": "ninguna", "escala": 70},
       {"sfx": [71.3, 79.8], "forma": "ninguna", "escala": 70},
-      {"boca": [37.4, 38.1], "globo": [26.8, 29.8]},
-      {"boca": [49.5, 36.7], "globo": [64.3, 29.9]}
+      {"boca": [37.9, 38.8], "globo": [26.6, 30.5], "transparencia": 25},
+      {"boca": [50.4, 37.4], "globo": [64.3, 29.9], "transparencia": 25}
     ],
     "017": [
-      {"boca": [51.4, 42], "globo": [60.4, 36.2], "transparencia": 25},
-      {"boca": [15.1, 55.3], "globo": [19.6, 43.2], "transparencia": 25},
-      {"boca": [17.5, 79.3], "globo": [22, 67.2], "transparencia": 25},
-      {"boca": [81.1, 78], "globo": [73.7, 69.2], "transparencia": 25}
+      {"boca": [51.9, 43.5], "globo": [59.2, 37.6], "transparencia": 25},
+      {"boca": [15.1, 55.3], "globo": [21.3, 47.5], "transparencia": 25},
+      {"boca": [17.5, 79.3], "globo": [27, 69.6], "transparencia": 25},
+      {"boca": [81.1, 78], "globo": [73.2, 71.6], "transparencia": 25}
     ],
-    "018": [{"boca": [60.9, 48.3], "globo": [41.7, 33.7], "transparencia": 25}],
+    "018": [{"boca": [61.6, 48.7], "globo": [48.8, 40.7], "transparencia": 25}],
+    "019": [{"boca": [41.3, 58.3], "globo": [48.1, 51.4], "transparencia": 25}],
     "020": [{"sfx": [46.9, 21.3], "forma": "ondas"}],
-    "023": [{"boca": [79.9, 55.7], "globo": [71.4, 41.6], "transparencia": 25}],
+    "023": [
+      {"sfx": [34.2, 38.8], "forma": "ninguna", "letras": "#9be15d", "escala": 140, "giro": -90},
+      {"boca": [77.3, 59.6], "globo": [76.4, 49.9], "transparencia": 25}
+    ],
     "024": [{"sfx": [69.4, 47.3], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
     "027": [{"sfx": [45, 35.7], "forma": "ondas", "letras": "#9be15d"}],
     "028": [{"boca": [30.1, 56.8], "globo": [41, 47.1], "transparencia": 25}],

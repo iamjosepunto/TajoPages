@@ -1,11 +1,11 @@
 {
   "celestial-invader": {
-    "003": [{"boca": [53.6, 47.8], "globo": [28, 55.8], "transparencia": 25}],
+    "003": [{"boca": [51.5, 48.6], "globo": [28, 55.8], "transparencia": 25}],
     "006": [{"sfx": [57.5, 31], "forma": "estallido", "letras": "#ff4d4d", "transparencia": 25}],
     "008": [{"sfx": [48.6, 50.9], "forma": "estallido", "fondo": "#ff8a1f", "transparencia": 50}],
     "013": [
-      {"boca": [43.2, 45.2], "globo": [24.1, 56], "transparencia": 25},
-      {"boca": [61.4, 42.6], "globo": [83.9, 52.8], "transparencia": 25}
+      {"boca": [39.9, 47.2], "globo": [24.1, 56], "transparencia": 25},
+      {"boca": [64.7, 44.4], "globo": [83.9, 52.8], "transparencia": 25}
     ],
     "015": [{"sfx": [45.8, 47.6], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
     "016": [
@@ -14,17 +14,17 @@
       {"sfx": [88.5, 57], "forma": "ninguna", "escala": 70},
       {"sfx": [22.7, 51.1], "forma": "ninguna", "escala": 70},
       {"sfx": [71.3, 79.8], "forma": "ninguna", "escala": 70},
-      {"boca": [37.9, 38.8], "globo": [26.6, 30.5], "transparencia": 25},
-      {"boca": [50.4, 37.4], "globo": [64.3, 29.9], "transparencia": 25}
+      {"boca": [36.5, 37.7], "globo": [26.6, 30.5], "transparencia": 25},
+      {"boca": [52.8, 37.2], "globo": [64.3, 29.9], "transparencia": 25}
     ],
     "017": [
-      {"boca": [51.9, 43.5], "globo": [59.2, 37.6], "transparencia": 25},
-      {"boca": [15.1, 55.3], "globo": [21.3, 47.5], "transparencia": 25},
-      {"boca": [17.5, 79.3], "globo": [27, 69.6], "transparencia": 25},
-      {"boca": [81.1, 78], "globo": [73.2, 71.6], "transparencia": 25}
+      {"boca": [52.4, 43.1], "globo": [59.2, 37.6], "transparencia": 25},
+      {"boca": [16, 53.8], "globo": [21.3, 47.5], "transparencia": 25},
+      {"boca": [19.4, 77.1], "globo": [27, 69.6], "transparencia": 25},
+      {"boca": [80.9, 77.9], "globo": [73.2, 71.6], "transparencia": 25}
     ],
-    "018": [{"boca": [61.6, 48.7], "globo": [48.8, 40.7], "transparencia": 25}],
-    "019": [{"boca": [41.3, 58.3], "globo": [48.1, 51.4], "transparencia": 25}],
+    "018": [{"boca": [60.9, 48.3], "globo": [48.8, 40.7], "transparencia": 25}],
+    "019": [{"boca": [44.1, 55.9], "globo": [48.1, 51.4], "transparencia": 25}],
     "020": [{"sfx": [46.9, 21.3], "forma": "ondas"}],
     "023": [
       {"sfx": [34.2, 38.8], "forma": "ninguna", "letras": "#9be15d", "escala": 140, "giro": -90},
@@ -32,17 +32,30 @@
     ],
     "024": [{"sfx": [69.4, 47.3], "forma": "grieta", "letras": "#fff4dc", "transparencia": 35}],
     "027": [{"sfx": [45, 35.7], "forma": "ondas", "letras": "#9be15d"}],
-    "028": [{"boca": [30.1, 56.8], "globo": [41, 47.1], "transparencia": 25}],
+    "028": [{"boca": [32.7, 55.2], "globo": [41, 47.1], "transparencia": 25}],
+    "029": [
+      {"sfx": [50, 78.1], "forma": "ninguna", "letras": "#9be15d", "escala": 70},
+      {"sfx": [33.4, 45.3], "forma": "estallido", "transparencia": 25, "escala": 75}
+    ],
     "032": [{"boca": [47, 46.1], "globo": [31.5, 34], "piensa": true, "transparencia": 25}],
     "033": [{"boca": [38.1, 48.6], "globo": [52.4, 37.8], "transparencia": 25}],
-    "035": [{"boca": [44.2, 51.3], "globo": [27.7, 38.5], "transparencia": 25}],
+    "034": [{"sfx": [54.8, 84], "forma": "ninguna", "escala": 50, "giro": -54}],
+    "035": [{"boca": [45.6, 49], "globo": [39.6, 38.7], "transparencia": 25}],
     "037": [{"boca": [42.9, 34.2], "globo": [65.9, 21.6], "piensa": true, "transparencia": 25}],
-    "042": [{"boca": [61.4, 51.6], "globo": [40, 38.8], "transparencia": 25}],
+    "042": [{"boca": [61.6, 49.6], "globo": [40, 38.8], "transparencia": 25}],
     "044": [{"boca": [60.9, 18.9], "globo": [73.2, 6.6], "piensa": true, "transparencia": 25}],
-    "049": [{"sfx": [71.3, 21.4], "forma": "ondas", "letras": "#9be15d"}],
-    "051": [{"sfx": [74.6, 40.7], "forma": "grieta", "transparencia": 70}],
+    "049": [{"sfx": [74.4, 30.3], "forma": "ninguna", "letras": "#9be15d", "giro": 28}],
+    "051": [{"sfx": [69.9, 58.9], "forma": "ninguna", "letras": "#7fd6ff", "escala": 130}],
+    "053": [
+      {"sfx": [88.4, 36.8], "forma": "estallido", "transparencia": 25, "escala": 65},
+      {"sfx": [8.7, 31.2], "forma": "estallido", "transparencia": 25},
+      {"sfx": [12.5, 72.5], "forma": "estallido", "transparencia": 25}
+    ],
+    "055": [{"sfx": [50, 74.2], "forma": "ninguna", "letras": "#fff4dc"}],
+    "056": [{"sfx": [76.3, 63.9], "forma": "ondas", "letras": "#ffc93c", "escala": 70}],
     "058": [{"boca": [26.7, 37.9], "globo": [15.4, 32]}],
     "059": [{"sfx": [91.6, 36.6], "forma": "estallido"}],
+    "060": [{"sfx": [79.9, 23.1], "forma": "ninguna", "escala": 55}],
     "062": [
       {"boca": [27.5, 20.9], "globo": [38.3, 14.6], "transparencia": 25},
       {"boca": [86, 36.4], "globo": [72.7, 29.6], "transparencia": 25},
@@ -50,28 +63,33 @@
     ],
     "064": [{"boca": [77, 64.2], "globo": [89.3, 73.1], "transparencia": 25}],
     "068": [{"sfx": [1.9, 25.3], "forma": "estallido", "fondo": "#ff8a1f", "transparencia": 80}],
+    "074": [{"sfx": [64.7, 39.2], "forma": "ninguna", "letras": "#ff8a1f", "escala": 85}],
     "076": [{"boca": [38, 49.7], "globo": [59.5, 37.4], "transparencia": 25}],
     "078": [{"sfx": [57.2, 81], "forma": "grieta", "transparencia": 50}],
+    "079": [{"sfx": [43.1, 70.3], "forma": "estallido", "transparencia": 25}],
     "081": [{"boca": [69.7, 56.6], "globo": [57.7, 51.3], "transparencia": 25}],
     "082": [{"sfx": [0.4, 52], "forma": "ondas", "letras": "#c49be8"}],
     "084": [{"boca": [32.5, 51.2], "globo": [62.8, 40], "piensa": true, "transparencia": 25}],
     "088": [{"boca": [52.2, 57.2], "globo": [66.1, 45], "piensa": true, "transparencia": 25}],
-    "090": [{"sfx": [99.1, 69], "forma": "salpicadura", "transparencia": 60}],
+    "090": [{"sfx": [73.7, 69.1], "forma": "ninguna", "letras": "#7fd6ff", "escala": 65}],
     "091": [{"sfx": [51.9, 55.2], "forma": "nube", "transparencia": 40}],
-    "092": [{"boca": [40.5, 39.7], "globo": [28.4, 32.6], "transparencia": 25}],
+    "092": [
+      {"sfx": [23.2, 3.5], "forma": "estallido", "transparencia": 30, "escala": 70},
+      {"boca": [41.5, 38.4], "globo": [28.9, 33.4]}
+    ],
     "093": [{"boca": [33.9, 27.3], "globo": [20.2, 7.5], "transparencia": 25}],
-    "094": [{"boca": [55.5, 30.1], "globo": [78, 14.7], "transparencia": 25}],
-    "095": [{"boca": [41.9, 21.2], "globo": [64.9, 4.6], "transparencia": 25}],
+    "094": [{"boca": [33.4, 19.9], "globo": [3.7, 10.2], "transparencia": 25}],
+    "095": [{"boca": [46.4, 18.3], "globo": [65.6, 0], "transparencia": 25}],
     "097": [
       {"boca": [34.3, 42.4], "globo": [59.5, 27.6], "transparencia": 25},
       {"boca": [59, 47.6], "globo": [72.3, 61], "transparencia": 25}
     ],
     "101": [{"boca": [42.4, 27.3], "globo": [70.6, 34.3], "transparencia": 25}],
     "105": [{"sfx": [63, 56], "forma": "ondas", "letras": "#7fd6ff"}],
-    "110": [{"boca": [55.7, 48.4], "globo": [66.9, 55.7], "transparencia": 25}],
+    "110": [{"sfx": [29.8, 62.4], "forma": "estallido", "letras": "#ff8a1f", "fondo": "#fff4dc", "transparencia": 50, "escala": 155}],
     "112": [{"sfx": [53.3, 45.1], "forma": "grieta", "letras": "#fff4dc", "transparencia": 60}],
-    "113": [{"sfx": [71, 37.8], "forma": "salpicadura", "transparencia": 60}],
-    "114": [{"sfx": [23.3, 83.8], "forma": "nube", "transparencia": 50}],
+    "113": [{"sfx": [55.6, 42.3], "forma": "ninguna", "letras": "#7fd6ff"}],
+    "114": [{"sfx": [52, 34.8], "forma": "ninguna", "letras": "#7fd6ff"}],
     "119": [{"boca": [54.5, 29.8], "globo": [70.4, 14.3], "transparencia": 25}]
   }
 }
